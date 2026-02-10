@@ -1,7 +1,7 @@
-defmodule Mix.Tasks.Bench.PingTest do
+defmodule Mix.Tasks.GiocciBench.PingTest do
   use ExUnit.Case, async: false
 
-  alias Mix.Tasks.Bench.Ping, as: PingTask
+  alias Mix.Tasks.GiocciBench.Ping, as: PingTask
 
   defmodule PingStub do
     def run(opts) do
@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Bench.PingTest do
     assert opts[:targets] == ["127.0.0.1"]
     assert opts[:count] == 5
     assert opts[:timeout_ms] == 1000
-    assert opts[:out_dir] == "bench_output"
+    assert opts[:out_dir] == "giocci_bench_output"
   end
 
   test "parses options" do

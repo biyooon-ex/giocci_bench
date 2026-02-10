@@ -6,7 +6,7 @@ defmodule GiocciBench.Ping do
   @default_targets ["127.0.0.1"]
   @default_count 5
   @default_timeout_ms 1000
-  @default_out_dir "bench_output"
+  @default_out_dir "giocci_bench_output"
   @columns [:run_id, :target, :iteration, :elapsed_ms, :success, :error, :started_at]
 
   def run(opts \\ []) do

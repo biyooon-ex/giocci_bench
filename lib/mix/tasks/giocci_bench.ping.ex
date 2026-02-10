@@ -1,4 +1,4 @@
-defmodule Mix.Tasks.Bench.Ping do
+defmodule Mix.Tasks.GiocciBench.Ping do
   use Mix.Task
 
   alias GiocciBench.Ping
@@ -13,7 +13,7 @@ defmodule Mix.Tasks.Bench.Ping do
     * `--targets` - Comma-separated target IPs (default: 127.0.0.1)
     * `--count` - Number of pings per target (default: 5)
     * `--timeout_ms` - Ping timeout in milliseconds (default: 1000)
-    * `--out_dir` - Output directory for CSV (default: bench_output)
+    * `--out_dir` - Output directory for CSV (default: giocci_bench_output)
 
   """
 
@@ -32,7 +32,7 @@ defmodule Mix.Tasks.Bench.Ping do
 
     count = Keyword.get(opts, :count, 5)
     timeout_ms = Keyword.get(opts, :timeout_ms, 1000)
-    out_dir = Keyword.get(opts, :out_dir, "bench_output")
+    out_dir = Keyword.get(opts, :out_dir, "giocci_bench_output")
 
     case ping_module.run(targets: targets, count: count, timeout_ms: timeout_ms, out_dir: out_dir) do
       {:ok, path} ->

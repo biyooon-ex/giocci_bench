@@ -56,6 +56,38 @@ defmodule GiocciBench.PingTest do
              )
   end
 
+  @tag :tmp_dir
+  test "writes error when ping fails", %{tmp_dir: tmp_dir} do
+    cmd_fun = fn _cmd, _args, _opts -> {"ping: unknown host\n", 1} end
+
+    {:ok, path} =
+      Ping.run(
+        ping_path: "/bin/ping",
+        cmd_fun: cmd_fun,
+        targets: ["127.0.0.1"],
+        count: 1,
+        out_dir: tmp_dir,
+        run_id: "error_run"
+      )
+
+    content = File.read!(path)
+    [header_line | data_lines] = String.split(content, "\r\n", trim: true)
+
+    assert length(data_lines) == 1
+
+    [row] =
+      data_lines
+      |> Enum.map(&String.split(&1, ","))
+
+    keys = String.split(header_line, ",")
+    row_map = Map.new(Enum.zip(keys, row))
+
+    assert row_map["run_id"] == "error_run"
+    assert row_map["success"] == "false"
+    assert row_map["elapsed_ms"] == ""
+    assert row_map["error"] == "ping: unknown host"
+  end
+
   describe "integration" do
     if is_nil(System.find_executable("ping")) do
       @tag skip: "ping command not available"
@@ -89,6 +121,36 @@ defmodule GiocciBench.PingTest do
 
       {elapsed_ms, _} = Float.parse(row_map["elapsed_ms"])
       assert elapsed_ms >= 0.0
+    end
+
+    @tag :tmp_dir
+    test "records error when ping target is unreachable", %{tmp_dir: tmp_dir} do
+      # 192.0.2.1 is a TEST-NET-1 address (RFC 5737) to avoid accidental reachability.
+      {:ok, path} =
+        Ping.run(
+          targets: ["192.0.2.1"],
+          count: 1,
+          timeout_ms: 200,
+          out_dir: tmp_dir,
+          run_id: "real_ping_fail"
+        )
+
+      content = File.read!(path)
+      [header_line | data_lines] = String.split(content, "\r\n", trim: true)
+
+      assert length(data_lines) == 1
+
+      [row] =
+        data_lines
+        |> Enum.map(&String.split(&1, ","))
+
+      keys = String.split(header_line, ",")
+      row_map = Map.new(Enum.zip(keys, row))
+
+      assert row_map["run_id"] == "real_ping_fail"
+      assert row_map["success"] == "false"
+      assert row_map["elapsed_ms"] == ""
+      assert row_map["error"] != ""
     end
   end
 end

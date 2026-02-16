@@ -14,6 +14,7 @@ defmodule GiocciBench.Measure.Single do
     :case_desc,
     :iteration,
     :elapsed_ms,
+    :engine_elapsed_ms,
     :warmup,
     :elixir_version,
     :otp_version,
@@ -64,7 +65,16 @@ defmodule GiocciBench.Measure.Single do
       filtered_cases
       |> Enum.with_index(1)
       |> Enum.flat_map(fn {{case_id, case_desc, fun}, case_index} ->
-        IO.puts("[#{case_index}/#{total_cases}] #{case_desc}")
+        case_display =
+          if case_id == "exec_func" do
+            {module, func, args} = mfargs
+
+            "#{case_desc} (module: #{inspect(module)}, func: #{inspect(func)}, args: #{inspect(args)})"
+          else
+            case_desc
+          end
+
+        IO.puts("[#{case_index}/#{total_cases}] #{case_display}")
         :ok = prepare_case(case_id, relay_name, module, timeout_ms)
         :ok = warmup_runs(warmup, fun)
         measure_iterations(case_id, case_desc, iterations, fun, run_id, started_at, env)
@@ -99,7 +109,16 @@ defmodule GiocciBench.Measure.Single do
 
     results =
       for iteration <- 1..iterations do
-        {elapsed_ms, _result} = timed_call(fun)
+        {elapsed_ms, result} = timed_call(fun)
+
+        # exec_func の場合のみ engine_elapsed_ms を取得
+        engine_elapsed_ms =
+          if case_id == "exec_func" do
+            {_value, engine_time} = result
+            engine_time
+          else
+            nil
+          end
 
         values = %{
           run_id: run_id,
@@ -107,6 +126,7 @@ defmodule GiocciBench.Measure.Single do
           case_desc: case_desc,
           iteration: iteration,
           elapsed_ms: elapsed_ms,
+          engine_elapsed_ms: engine_elapsed_ms,
           warmup: false,
           elixir_version: env.elixir_version,
           otp_version: env.otp_version,
@@ -235,7 +255,7 @@ defmodule GiocciBench.Measure.Single do
     Application.get_env(
       :giocci_bench,
       :single_measure_mfargs,
-      {GiocciBench.Samples.Add, :add, [1, 2]}
+      {GiocciBench.Samples.Add, :run, [[1, 2]]}
     )
   end
 end

@@ -1,9 +1,11 @@
 defmodule GiocciBench.Samples.Sieve do
   @moduledoc "Sieve of Eratosthenes (CPU-intensive benchmark)"
 
+  @behaviour GiocciBench.Samples.Benchmark
+
   # Sieve of Eratosthenes: CPU 負荷のかかった計算処理
   # 指定された上限までの素数をふるいで求める
-  def sieve(limit) when is_integer(limit) and limit >= 2 do
+  defp sieve_impl(limit) when is_integer(limit) and limit >= 2 do
     2..limit
     |> Enum.reduce(
       %{},
@@ -23,5 +25,21 @@ defmodule GiocciBench.Samples.Sieve do
     |> Enum.count()
   end
 
-  def sieve(limit) when limit < 2, do: 0
+  defp sieve_impl(limit) when limit < 2, do: 0
+
+  @spec run(list()) :: {integer(), float()}
+  @impl true
+  def run([limit]) do
+    start_time = System.monotonic_time()
+    result = sieve_impl(limit)
+
+    elapsed_ms =
+      System.monotonic_time()
+      |> Kernel.-(start_time)
+      |> System.convert_time_unit(:native, :microsecond)
+      |> Kernel./(1000)
+      |> Float.round(3)
+
+    {result, elapsed_ms}
+  end
 end

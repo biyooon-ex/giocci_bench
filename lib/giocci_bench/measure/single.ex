@@ -52,10 +52,19 @@ defmodule GiocciBench.Measure.Single do
        fn -> Giocci.exec_func(relay_name, mfargs, timeout: timeout_ms) end}
     ]
 
-    rows =
+    filtered_cases =
       cases
       |> Enum.filter(fn {case_id, _case_desc, _fun} -> case_id in selected_cases end)
-      |> Enum.flat_map(fn {case_id, case_desc, fun} ->
+
+    total_cases = Enum.count(filtered_cases)
+    IO.puts("\n[Single Measurement] Cases to measure: #{total_cases}")
+    IO.puts("Warmup iterations: #{warmup}, Measurement iterations: #{iterations}\n")
+
+    rows =
+      filtered_cases
+      |> Enum.with_index(1)
+      |> Enum.flat_map(fn {{case_id, case_desc, fun}, case_index} ->
+        IO.puts("[#{case_index}/#{total_cases}] #{case_desc}")
         :ok = prepare_case(case_id, relay_name, module, timeout_ms)
         :ok = warmup_runs(warmup, fun)
         measure_iterations(case_id, case_desc, iterations, fun, run_id, started_at, env)
@@ -72,34 +81,48 @@ defmodule GiocciBench.Measure.Single do
   # warmup: JIT コンパイルやキャッシュの初期化など、最初の実行による異常値を避けるため
   # 実際の計測前に数回実行して、システムを安定状態に導く
   defp warmup_runs(count, fun) when count > 0 do
-    for _ <- 1..count, do: fun.()
+    IO.write("  Warmup: ")
+
+    for _ <- 1..count do
+      fun.()
+      IO.write(".")
+    end
+
+    IO.puts(" done")
     :ok
   end
 
   defp warmup_runs(_count, _fun), do: :ok
 
   defp measure_iterations(case_id, case_desc, iterations, fun, run_id, started_at, env) do
-    for iteration <- 1..iterations do
-      {elapsed_ms, _result} = timed_call(fun)
+    IO.write("  Measuring: ")
 
-      values = %{
-        run_id: run_id,
-        case_id: case_id,
-        case_desc: case_desc,
-        iteration: iteration,
-        elapsed_ms: elapsed_ms,
-        warmup: false,
-        elixir_version: env.elixir_version,
-        otp_version: env.otp_version,
-        os: env.os,
-        cpu: env.cpu,
-        cpu_cores: env.cpu_cores,
-        memory_mib: env.memory_mib,
-        started_at: started_at
-      }
+    results =
+      for iteration <- 1..iterations do
+        {elapsed_ms, _result} = timed_call(fun)
 
-      Enum.map(@columns, &Map.fetch!(values, &1))
-    end
+        values = %{
+          run_id: run_id,
+          case_id: case_id,
+          case_desc: case_desc,
+          iteration: iteration,
+          elapsed_ms: elapsed_ms,
+          warmup: false,
+          elixir_version: env.elixir_version,
+          otp_version: env.otp_version,
+          os: env.os,
+          cpu: env.cpu,
+          cpu_cores: env.cpu_cores,
+          memory_mib: env.memory_mib,
+          started_at: started_at
+        }
+
+        IO.write(".")
+        Enum.map(@columns, &Map.fetch!(values, &1))
+      end
+
+    IO.puts(" done")
+    results
   end
 
   defp timed_call(fun) do

@@ -1,4 +1,4 @@
-defmodule GiocciBench.Csv do
+defmodule GiocciBench.Output do
   @moduledoc false
 
   alias NimbleCSV.RFC4180, as: CSV
@@ -14,6 +14,13 @@ defmodule GiocciBench.Csv do
 
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, content)
+  end
+
+  def write_metadata_json!(path, metadata) when is_map(metadata) do
+    File.mkdir_p!(Path.dirname(path))
+    json_iodata = :json.format(metadata)
+    json_string = IO.iodata_to_binary(json_iodata)
+    File.write!(path, json_string)
   end
 
   defp assert_row_sizes!(header, rows) do

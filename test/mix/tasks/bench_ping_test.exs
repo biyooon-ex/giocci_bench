@@ -6,7 +6,7 @@ defmodule Mix.Tasks.GiocciBench.PingTest do
   defmodule PingStub do
     def run(opts) do
       send(self(), {:ping_opts, opts})
-      {:ok, "tmp/ping.csv"}
+      {:ok, "tmp/session_ping"}
     end
   end
 
@@ -40,7 +40,7 @@ defmodule Mix.Tasks.GiocciBench.PingTest do
 
     PingTask.run([])
 
-    assert_receive {:mix_shell, :info, ["ping CSV written: tmp/ping.csv"]}
+    assert_receive {:mix_shell, :info, ["ping measurement session created: tmp/session_ping"]}
     assert_receive {:ping_opts, opts}
 
     assert opts[:targets] == ["127.0.0.1"]

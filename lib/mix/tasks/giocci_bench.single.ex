@@ -42,7 +42,7 @@ defmodule Mix.Tasks.GiocciBench.Single do
     out_dir = Keyword.get(opts, :out_dir)
     cases = parse_cases(Keyword.get(opts, :cases))
 
-    {:ok, path} =
+    {:ok, session_dir} =
       Single.run(
         relay_name: relay_name,
         warmup: warmup,
@@ -52,7 +52,7 @@ defmodule Mix.Tasks.GiocciBench.Single do
         cases: cases
       )
 
-    Mix.shell().info("single measurement CSV written: #{path}")
+    Mix.shell().info("measurement session created: #{session_dir}")
   end
 
   defp parse_cases(nil), do: nil

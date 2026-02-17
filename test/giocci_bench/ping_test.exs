@@ -7,7 +7,7 @@ defmodule GiocciBench.PingTest do
   test "writes ping CSV with expected columns", %{tmp_dir: tmp_dir} do
     cmd_fun = fn _cmd, _args, _opts -> {"64 bytes from 127.0.0.1: time=12.0 ms\n", 0} end
 
-    {:ok, path} =
+    {:ok, session_dir} =
       Ping.run(
         ping_path: "/bin/ping",
         cmd_fun: cmd_fun,
@@ -17,7 +17,7 @@ defmodule GiocciBench.PingTest do
         run_id: "test_run"
       )
 
-    content = File.read!(path)
+    content = File.read!(Path.join(session_dir, "ping.csv"))
     [header_line | data_lines] = String.split(content, "\r\n", trim: true)
 
     assert header_line == "run_id,target,iteration,elapsed_ms,success,error,started_at"
@@ -60,7 +60,7 @@ defmodule GiocciBench.PingTest do
   test "writes error when ping fails", %{tmp_dir: tmp_dir} do
     cmd_fun = fn _cmd, _args, _opts -> {"ping: unknown host\n", 1} end
 
-    {:ok, path} =
+    {:ok, session_dir} =
       Ping.run(
         ping_path: "/bin/ping",
         cmd_fun: cmd_fun,
@@ -70,7 +70,7 @@ defmodule GiocciBench.PingTest do
         run_id: "error_run"
       )
 
-    content = File.read!(path)
+    content = File.read!(Path.join(session_dir, "ping.csv"))
     [header_line | data_lines] = String.split(content, "\r\n", trim: true)
 
     assert length(data_lines) == 1
@@ -95,7 +95,7 @@ defmodule GiocciBench.PingTest do
 
     @tag :tmp_dir
     test "runs real ping to localhost", %{tmp_dir: tmp_dir} do
-      {:ok, path} =
+      {:ok, session_dir} =
         Ping.run(
           targets: ["127.0.0.1"],
           count: 1,
@@ -103,7 +103,7 @@ defmodule GiocciBench.PingTest do
           run_id: "real_ping"
         )
 
-      content = File.read!(path)
+      content = File.read!(Path.join(session_dir, "ping.csv"))
       [header_line | data_lines] = String.split(content, "\r\n", trim: true)
 
       assert header_line == "run_id,target,iteration,elapsed_ms,success,error,started_at"
@@ -126,7 +126,7 @@ defmodule GiocciBench.PingTest do
     @tag :tmp_dir
     test "records error when ping target is unreachable", %{tmp_dir: tmp_dir} do
       # 192.0.2.1 is a TEST-NET-1 address (RFC 5737) to avoid accidental reachability.
-      {:ok, path} =
+      {:ok, session_dir} =
         Ping.run(
           targets: ["192.0.2.1"],
           count: 1,
@@ -135,7 +135,7 @@ defmodule GiocciBench.PingTest do
           run_id: "real_ping_fail"
         )
 
-      content = File.read!(path)
+      content = File.read!(Path.join(session_dir, "ping.csv"))
       [header_line | data_lines] = String.split(content, "\r\n", trim: true)
 
       assert length(data_lines) == 1

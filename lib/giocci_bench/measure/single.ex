@@ -1,7 +1,7 @@
 defmodule GiocciBench.Measure.Single do
   @moduledoc false
 
-  alias GiocciBench.Csv
+  alias GiocciBench.Output
 
   @default_warmup 1
   @default_iterations 5
@@ -15,14 +15,7 @@ defmodule GiocciBench.Measure.Single do
     :iteration,
     :elapsed_ms,
     :engine_elapsed_ms,
-    :warmup,
-    :elixir_version,
-    :otp_version,
-    :os,
-    :cpu,
-    :cpu_cores,
-    :memory_mib,
-    :started_at
+    :warmup
   ]
 
   def run(opts \\ []) do
@@ -82,15 +75,33 @@ defmodule GiocciBench.Measure.Single do
         IO.puts("[#{case_index}/#{total_cases}] #{case_display}")
         :ok = prepare_case(case_id, relay_name, module, timeout_ms)
         :ok = warmup_runs(warmup, fun)
-        measure_iterations(case_id, case_desc, iterations, fun, run_id, started_at, env, warmup)
+        measure_iterations(case_id, case_desc, iterations, fun, run_id, warmup)
       end)
 
-    path = Path.join(out_dir, "single_#{run_id}.csv")
+    # セッションディレクトリを作成
+    session_dir = Path.join(out_dir, "session_#{run_id}")
+    File.mkdir_p!(session_dir)
+
+    # 計測結果を CSV に出力
+    csv_path = Path.join(session_dir, "single.csv")
     header = Enum.map(@columns, &Atom.to_string/1)
+    Output.write_csv!(csv_path, header, rows)
 
-    Csv.write_csv!(path, header, rows)
+    # メタデータを JSON に出力
+    metadata = %{
+      "run_id" => run_id,
+      "started_at" => started_at,
+      "elixir_version" => env.elixir_version,
+      "otp_version" => env.otp_version,
+      "os" => env.os,
+      "cpu" => env.cpu,
+      "cpu_cores" => env.cpu_cores
+    }
 
-    {:ok, path}
+    meta_path = Path.join(session_dir, "meta.json")
+    Output.write_metadata_json!(meta_path, metadata)
+
+    {:ok, session_dir}
   end
 
   # warmup: JIT コンパイルやキャッシュの初期化など、最初の実行による異常値を避けるため
@@ -115,8 +126,6 @@ defmodule GiocciBench.Measure.Single do
          iterations,
          fun,
          run_id,
-         started_at,
-         env,
          warmup_count
        ) do
     IO.write("  Measuring: ")
@@ -141,14 +150,7 @@ defmodule GiocciBench.Measure.Single do
           iteration: iteration,
           elapsed_ms: elapsed_ms,
           engine_elapsed_ms: engine_elapsed_ms,
-          warmup: warmup_count,
-          elixir_version: env.elixir_version,
-          otp_version: env.otp_version,
-          os: env.os,
-          cpu: env.cpu,
-          cpu_cores: env.cpu_cores,
-          memory_mib: env.memory_mib,
-          started_at: started_at
+          warmup: warmup_count
         }
 
         IO.write(".")
@@ -217,8 +219,7 @@ defmodule GiocciBench.Measure.Single do
       otp_version: System.otp_release(),
       os: os_string(),
       cpu: cpu_arch(),
-      cpu_cores: cpu_cores(),
-      memory_mib: memory_mib()
+      cpu_cores: cpu_cores()
     }
   end
 
@@ -242,18 +243,6 @@ defmodule GiocciBench.Measure.Single do
 
       value ->
         value
-    end
-  end
-
-  # Erlang VM が確保しているメモリ総量を MiB 単位で取得（1 MiB = 1024^2 bytes）
-  defp memory_mib do
-    case :erlang.memory(:total) do
-      bytes when is_integer(bytes) ->
-        (bytes / 1_048_576)
-        |> Float.round(2)
-
-      _ ->
-        nil
     end
   end
 

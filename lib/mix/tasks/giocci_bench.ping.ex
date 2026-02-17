@@ -36,8 +36,8 @@ defmodule Mix.Tasks.GiocciBench.Ping do
     out_dir = Keyword.get(opts, :out_dir, "giocci_bench_output")
 
     case ping_module.run(targets: targets, count: count, timeout_ms: timeout_ms, out_dir: out_dir) do
-      {:ok, path} ->
-        Mix.shell().info("ping CSV written: #{path}")
+      {:ok, session_dir} ->
+        Mix.shell().info("ping measurement session created: #{session_dir}")
 
       {:error, :ping_not_found} ->
         Mix.raise("ping command not found. Please install iputils/ping.")

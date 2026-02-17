@@ -1,7 +1,7 @@
 defmodule GiocciBench.Ping do
   @moduledoc false
 
-  alias GiocciBench.Csv
+  alias GiocciBench.Output
 
   @default_targets ["127.0.0.1"]
   @default_count 5
@@ -22,11 +22,16 @@ defmodule GiocciBench.Ping do
       started_at = DateTime.utc_now() |> DateTime.to_iso8601()
       rows = build_rows(ping_path, cmd_fun, targets, count, timeout_ms, run_id, started_at)
 
-      path = Path.join(out_dir, "ping_#{run_id}.csv")
+      # セッションディレクトリを作成
+      session_dir = Path.join(out_dir, "session_#{run_id}")
+      File.mkdir_p!(session_dir)
+
+      # ping の計測結果を CSV に出力
+      csv_path = Path.join(session_dir, "ping.csv")
       header = header()
 
-      Csv.write_csv!(path, header, rows)
-      {:ok, path}
+      Output.write_csv!(csv_path, header, rows)
+      {:ok, session_dir}
     end
   end
 

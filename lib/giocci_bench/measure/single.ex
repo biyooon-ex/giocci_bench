@@ -260,6 +260,7 @@ defmodule GiocciBench.Measure.Single do
   defp timed_call(fun, measure_to) do
     start_time = System.monotonic_time()
     result = fun.(measure_to)
+    end_time = System.monotonic_time()
 
     case result do
       {:error, reason} ->
@@ -267,8 +268,7 @@ defmodule GiocciBench.Measure.Single do
 
       _ ->
         elapsed_ms =
-          System.monotonic_time()
-          |> Kernel.-(start_time)
+          (end_time - start_time)
           |> System.convert_time_unit(:native, :microsecond)
           |> Kernel./(1000)
           |> Float.round(3)

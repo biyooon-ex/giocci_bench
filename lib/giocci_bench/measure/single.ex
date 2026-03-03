@@ -12,7 +12,6 @@ defmodule GiocciBench.Measure.Single do
   @columns [
     :run_id,
     :case_id,
-    :case_desc,
     :iteration,
     :elapsed_ms,
     :engine_elapsed_ms,
@@ -62,6 +61,12 @@ defmodule GiocciBench.Measure.Single do
     session_dir = Path.join(out_dir, "session_#{run_id}")
     File.mkdir_p!(session_dir)
 
+    # case_id → case_desc のマップを作成
+    cases_mapping =
+      filtered_cases
+      |> Enum.map(fn {case_id, case_desc, _fun} -> {case_id, case_desc} end)
+      |> Map.new()
+
     # メタデータを JSON に出力
     metadata = %{
       "run_id" => run_id,
@@ -70,7 +75,8 @@ defmodule GiocciBench.Measure.Single do
       "otp_version" => env.otp_version,
       "os" => env.os,
       "cpu" => env.cpu,
-      "cpu_cores" => env.cpu_cores
+      "cpu_cores" => env.cpu_cores,
+      "cases" => cases_mapping
     }
 
     meta_path = Path.join(session_dir, "meta.json")
@@ -102,7 +108,7 @@ defmodule GiocciBench.Measure.Single do
       IO.puts("[#{case_index}/#{total_cases}] #{case_display}")
       :ok = prepare_case(case_id, relay_name, module, timeout_ms)
       :ok = warmup_runs(warmup, fun)
-      rows = measure_iterations(case_id, case_desc, iterations, fun, run_id, warmup)
+      rows = measure_iterations(case_id, iterations, fun, run_id, warmup)
 
       # 各 case_id ごとに CSV ファイルに出力
       csv_path = Path.join(session_dir, "#{case_id}.csv")
@@ -150,7 +156,6 @@ defmodule GiocciBench.Measure.Single do
 
   defp measure_iterations(
          case_id,
-         case_desc,
          iterations,
          fun,
          run_id,
@@ -174,7 +179,6 @@ defmodule GiocciBench.Measure.Single do
         values = %{
           run_id: run_id,
           case_id: case_id,
-          case_desc: case_desc,
           iteration: iteration,
           elapsed_ms: elapsed_ms,
           engine_elapsed_ms: engine_elapsed_ms,

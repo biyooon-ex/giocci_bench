@@ -9,13 +9,39 @@ defmodule GiocciBench.Measure.Single do
   @default_out_dir "giocci_bench_output"
   @default_cases ["register_client", "save_module", "exec_func", "local_exec"]
   @default_ping true
-  @columns [
+  @default_include_timestamps false
+
+  @base_columns [
     :run_id,
     :case_id,
     :iteration,
     :elapsed_ms,
     :engine_elapsed_ms,
     :warmup
+  ]
+
+  @calculated_columns [
+    :client_to_relay,
+    :relay_to_client,
+    :relay_to_engine,
+    :engine_to_relay,
+    :client_to_engine,
+    :engine_to_client
+  ]
+
+  @timestamp_columns [
+    :client_send_timestamp_to_relay,
+    :relay_recv_timestamp_from_client,
+    :relay_send_timestamp_to_client,
+    :client_recv_timestamp_from_relay,
+    :relay_send_timestamp_to_engine,
+    :engine_recv_timestamp_from_relay,
+    :engine_send_timestamp_to_relay,
+    :relay_recv_timestamp_from_engine,
+    :client_send_timestamp_to_engine,
+    :engine_recv_timestamp_from_client,
+    :engine_send_timestamp_to_client,
+    :client_recv_timestamp_from_engine
   ]
 
   def run(opts \\ []) do
@@ -30,6 +56,7 @@ defmodule GiocciBench.Measure.Single do
     ping = fetch_option(opts, :ping, @default_ping)
     ping_targets = Keyword.get(opts, :ping_targets)
     ping_count = Keyword.get(opts, :ping_count)
+    include_timestamps = fetch_option(opts, :include_timestamps, @default_include_timestamps)
 
     started_at = DateTime.utc_now() |> DateTime.to_iso8601()
     env = env_info()
@@ -43,14 +70,21 @@ defmodule GiocciBench.Measure.Single do
     #   - case_id: ケースの識別子（文字列）。結果CSVで使用、filter時の判定キー
     #   - case_desc: Giocciのメソッドシグネチャなど、ケース説明（文字列）。CSV出力に含まれる
     #   - fun: 実際に実行する無名関数。warmup_runs と measure_iterations で呼び出される
+    #         measure_to オプションは呼び出し側で決定
     cases = [
       {"register_client", "Giocci.register_client/2",
-       fn -> Giocci.register_client(relay_name, timeout: timeout_ms) end},
+       fn measure_to ->
+         Giocci.register_client(relay_name, timeout: timeout_ms, measure_to: measure_to)
+       end},
       {"save_module", "Giocci.save_module/3",
-       fn -> Giocci.save_module(relay_name, module, timeout: timeout_ms) end},
+       fn measure_to ->
+         Giocci.save_module(relay_name, module, timeout: timeout_ms, measure_to: measure_to)
+       end},
       {"exec_func", "Giocci.exec_func/3",
-       fn -> Giocci.exec_func(relay_name, mfargs, timeout: timeout_ms) end},
-      {"local_exec", local_exec_desc, fn -> apply(module, func, args) end}
+       fn measure_to ->
+         Giocci.exec_func(relay_name, mfargs, timeout: timeout_ms, measure_to: measure_to)
+       end},
+      {"local_exec", local_exec_desc, fn _measure_to -> apply(module, func, args) end}
     ]
 
     filtered_cases =
@@ -91,7 +125,8 @@ defmodule GiocciBench.Measure.Single do
     IO.puts("\n[Single Measurement] Cases to measure: #{total_cases}")
     IO.puts("Warmup iterations: #{warmup}, Measurement iterations: #{iterations}\n")
 
-    header = Enum.map(@columns, &Atom.to_string/1)
+    columns = build_columns(include_timestamps)
+    header = Enum.map(columns, &Atom.to_string/1)
 
     filtered_cases
     |> Enum.with_index(1)
@@ -107,8 +142,8 @@ defmodule GiocciBench.Measure.Single do
 
       IO.puts("[#{case_index}/#{total_cases}] #{case_display}")
       :ok = prepare_case(case_id, relay_name, module, timeout_ms)
-      :ok = warmup_runs(warmup, fun)
-      rows = measure_iterations(case_id, iterations, fun, run_id, warmup)
+      :ok = warmup_runs(warmup, fun, case_id)
+      rows = measure_iterations(case_id, iterations, fun, run_id, warmup, columns)
 
       # 各 case_id ごとに CSV ファイルに出力
       csv_path = Path.join(session_dir, "#{case_id}.csv")
@@ -140,11 +175,12 @@ defmodule GiocciBench.Measure.Single do
 
   # warmup: JIT コンパイルやキャッシュの初期化など、最初の実行による異常値を避けるため
   # 実際の計測前に数回実行して、システムを安定状態に導く
-  defp warmup_runs(count, fun) when count > 0 do
+  # warmup では測定値を取得しないため measure_to: nil を渡す
+  defp warmup_runs(count, fun, _case_id) when count > 0 do
     IO.write("  Warmup: ")
 
     for _ <- 1..count do
-      fun.()
+      fun.(nil)
       IO.write(".")
     end
 
@@ -152,20 +188,35 @@ defmodule GiocciBench.Measure.Single do
     :ok
   end
 
-  defp warmup_runs(_count, _fun), do: :ok
+  defp warmup_runs(_count, _fun, _case_id), do: :ok
 
   defp measure_iterations(
          case_id,
          iterations,
          fun,
          run_id,
-         warmup_count
+      warmup_count,
+      columns
        ) do
     IO.write("  Measuring: ")
 
+    measure_to = if case_id == "local_exec", do: nil, else: self()
+
     results =
       for iteration <- 1..iterations do
-        {elapsed_ms, result} = timed_call(fun)
+        {elapsed_ms, result} = timed_call(fun, measure_to)
+
+        # giocci から測定値を受信
+        measurements =
+          if measure_to do
+            receive do
+              {:giocci_measurements, m} -> m
+            after
+              1000 -> %{}
+            end
+          else
+            %{}
+          end
 
         # exec_func と local_exec の場合のみ engine_elapsed_ms を取得
         engine_elapsed_ms =
@@ -176,26 +227,28 @@ defmodule GiocciBench.Measure.Single do
             nil
           end
 
-        values = %{
-          run_id: run_id,
-          case_id: case_id,
-          iteration: iteration,
-          elapsed_ms: elapsed_ms,
-          engine_elapsed_ms: engine_elapsed_ms,
-          warmup: warmup_count
-        }
+        values =
+          %{
+            run_id: run_id,
+            case_id: case_id,
+            iteration: iteration,
+            elapsed_ms: elapsed_ms,
+            engine_elapsed_ms: engine_elapsed_ms,
+            warmup: warmup_count
+          }
+          |> Map.merge(measurements)
 
         IO.write(".")
-        Enum.map(@columns, &Map.fetch!(values, &1))
+        Enum.map(columns, &Map.get(values, &1))
       end
 
     IO.puts(" done")
     results
   end
 
-  defp timed_call(fun) do
+  defp timed_call(fun, measure_to) do
     start_time = System.monotonic_time()
-    result = fun.()
+    result = fun.(measure_to)
 
     case result do
       {:error, reason} ->
@@ -210,6 +263,14 @@ defmodule GiocciBench.Measure.Single do
           |> Float.round(3)
 
         {elapsed_ms, result}
+    end
+  end
+
+  defp build_columns(include_timestamps) do
+    if include_timestamps do
+      @base_columns ++ @calculated_columns ++ @timestamp_columns
+    else
+      @base_columns ++ @calculated_columns
     end
   end
 

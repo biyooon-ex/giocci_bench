@@ -19,6 +19,7 @@ defmodule Mix.Tasks.GiocciBench.Single do
     * `--no-ping` - Disable ping measurement (default: enabled)
     * `--ping-targets` - Comma-separated ping targets (default: 127.0.0.1)
     * `--ping-count` - Number of pings per target (default: 5)
+    * `--include-timestamps` - Include raw measurement timestamp columns in CSV (default: disabled)
 
   """
 
@@ -37,7 +38,8 @@ defmodule Mix.Tasks.GiocciBench.Single do
           cases: :string,
           ping: :boolean,
           ping_targets: :string,
-          ping_count: :integer
+          ping_count: :integer,
+          include_timestamps: :boolean
         ]
       )
 
@@ -50,6 +52,7 @@ defmodule Mix.Tasks.GiocciBench.Single do
     ping = Keyword.get(opts, :ping, true)
     ping_targets = parse_ping_targets(Keyword.get(opts, :ping_targets))
     ping_count = Keyword.get(opts, :ping_count)
+    include_timestamps = Keyword.get(opts, :include_timestamps, false)
 
     {:ok, session_dir} =
       Single.run(
@@ -61,7 +64,8 @@ defmodule Mix.Tasks.GiocciBench.Single do
         cases: cases,
         ping: ping,
         ping_targets: ping_targets,
-        ping_count: ping_count
+        ping_count: ping_count,
+        include_timestamps: include_timestamps
       )
 
     Mix.shell().info("measurement session created: #{session_dir}")

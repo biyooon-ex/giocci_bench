@@ -111,6 +111,8 @@ giocci_bench_output/
 - UTF-8, 改行は LF
 - 環境情報は `meta.json` に記録するため CSV に含めない
 - ケース説明 (`case_desc`) は `meta.json` の `cases` マップに記録
+- 計算済み通信時間はデフォルトで出力
+- 計算元タイムスタンプは `--include-timestamps` 指定時のみ出力（デフォルト: 非出力）
 
 ##### カラム
 
@@ -122,6 +124,27 @@ giocci_bench_output/
 | elapsed_ms | float | クライアント側での処理時間 ($ms$, 小数点以下3桁) |
 | engine_elapsed_ms | float | エンジン上での処理時間 ($ms$, 小数点以下3桁、`exec_func`/`local_exec` のみ) |
 | warmup | integer | 実行した warmup 回数 |
+| client_to_relay | float | クライアント→リレー通信時間 ($ms$) |
+| relay_to_client | float | リレー→クライアント通信時間 ($ms$) |
+| relay_to_engine | float | リレー→エンジン通信時間 ($ms$) |
+| engine_to_relay | float | エンジン→リレー通信時間 ($ms$) |
+| client_to_engine | float | クライアント→エンジン通信時間 ($ms$) |
+| engine_to_client | float | エンジン→クライアント通信時間 ($ms$) |
+
+`--include-timestamps` 指定時は、以下の計算元タイムスタンプ列（$ms$）も追加で出力されます。
+
+- `client_send_timestamp_to_relay`
+- `relay_recv_timestamp_from_client`
+- `relay_send_timestamp_to_client`
+- `client_recv_timestamp_from_relay`
+- `relay_send_timestamp_to_engine`
+- `engine_recv_timestamp_from_relay`
+- `engine_send_timestamp_to_relay`
+- `relay_recv_timestamp_from_engine`
+- `client_send_timestamp_to_engine`
+- `engine_recv_timestamp_from_client`
+- `engine_send_timestamp_to_client`
+- `client_recv_timestamp_from_engine`
 
 #### ping 計測 (ping.csv)
 
@@ -166,6 +189,9 @@ mix giocci_bench.single --ping-targets "127.0.0.1,8.8.8.8" --ping-count 3 --iter
 
 # 特定のケースのみ計測
 mix giocci_bench.single --cases "register_client,save_module"
+
+# 計算元タイムスタンプ列も出力
+mix giocci_bench.single --include-timestamps
 ```
 
 ### 利用可能なオプション
@@ -179,6 +205,7 @@ mix giocci_bench.single --cases "register_client,save_module"
 - `--no-ping` - ping 計測を無効化（デフォルト: 有効）
 - `--ping-targets` - ping ターゲット（カンマ区切り）（デフォルト: 127.0.0.1）
 - `--ping-count` - 各ターゲットへの ping 回数（デフォルト: 5）
+- `--include-timestamps` - 計算元タイムスタンプ列をCSVに含める（デフォルト: 無効）
 
 ## Installation
 

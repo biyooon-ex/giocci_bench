@@ -63,6 +63,8 @@ giocci_bench_output/
     meta.json                  # 計測セッションのメタデータ
     ping.csv                   # ping 計測結果
     register_client.csv        # 単体計測結果（ケースごとに分割）
+    register_client_os_info_free.csv      # OS情報（--os-info 指定時のみ）
+    register_client_os_info_proc_stat.csv # OS情報（--os-info 指定時のみ）
     save_module.csv
     exec_func.csv
     local_exec.csv
@@ -78,6 +80,7 @@ giocci_bench_output/
 - 出力先ディレクトリのデフォルトは `giocci_bench_output`
 - `session_<run_id>` ディレクトリ名は実行開始時刻の Unix ミリ秒
 - 単体計測結果は `case_id` ごとに別ファイルに分割（例: `register_client.csv`, `save_module.csv`）
+- `--os-info` 指定時は各ケースごとに OS 情報 CSV（`*_os_info_free.csv`, `*_os_info_proc_stat.csv`）を同じディレクトリに保存
 
 ### メタデータ仕様 (meta.json)
 
@@ -192,6 +195,9 @@ mix giocci_bench.single --cases "register_client,save_module"
 
 # 計算元タイムスタンプ列も出力
 mix giocci_bench.single --include-timestamps
+
+# OS情報（CPU/メモリ）も取得（100ms周期、warmup後〜計測完了まで）
+mix giocci_bench.single --os-info
 ```
 
 ### 利用可能なオプション
@@ -206,6 +212,7 @@ mix giocci_bench.single --include-timestamps
 - `--ping-targets` - ping ターゲット（カンマ区切り）（デフォルト: 127.0.0.1）
 - `--ping-count` - 各ターゲットへの ping 回数（デフォルト: 5）
 - `--include-timestamps` - 計算元タイムスタンプ列をCSVに含める（デフォルト: 無効）
+- `--os-info` - OS情報計測を有効化（100ms周期、warmup後〜計測完了まで、デフォルト: 無効）
 
 ## Installation
 

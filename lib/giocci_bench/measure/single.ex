@@ -10,6 +10,8 @@ defmodule GiocciBench.Measure.Single do
   @default_cases ["register_client", "save_module", "exec_func", "local_exec"]
   @default_ping true
   @default_include_timestamps false
+  @default_os_info false
+  @os_info_interval_ms 100
 
   @base_columns [
     :run_id,
@@ -57,6 +59,7 @@ defmodule GiocciBench.Measure.Single do
     ping_targets = Keyword.get(opts, :ping_targets)
     ping_count = Keyword.get(opts, :ping_count)
     include_timestamps = fetch_option(opts, :include_timestamps, @default_include_timestamps)
+    os_info = fetch_option(opts, :os_info, @default_os_info)
 
     started_at = DateTime.utc_now() |> DateTime.to_iso8601()
     env = env_info()
@@ -143,7 +146,15 @@ defmodule GiocciBench.Measure.Single do
       IO.puts("[#{case_index}/#{total_cases}] #{case_display}")
       :ok = prepare_case(case_id, relay_name, module, timeout_ms)
       :ok = warmup_runs(warmup, fun, case_id)
-      rows = measure_iterations(case_id, iterations, fun, run_id, warmup, columns)
+
+      rows =
+        if os_info do
+          measure_with_os_info(session_dir, case_id, fn ->
+            measure_iterations(case_id, iterations, fun, run_id, warmup, columns)
+          end)
+        else
+          measure_iterations(case_id, iterations, fun, run_id, warmup, columns)
+        end
 
       # 各 case_id ごとに CSV ファイルに出力
       csv_path = Path.join(session_dir, "#{case_id}.csv")
@@ -195,8 +206,8 @@ defmodule GiocciBench.Measure.Single do
          iterations,
          fun,
          run_id,
-      warmup_count,
-      columns
+         warmup_count,
+         columns
        ) do
     IO.write("  Measuring: ")
 
@@ -263,6 +274,26 @@ defmodule GiocciBench.Measure.Single do
           |> Float.round(3)
 
         {elapsed_ms, result}
+    end
+  end
+
+  defp measure_with_os_info(session_dir, case_id, measure_fun) when is_function(measure_fun, 0) do
+    prefix = "#{case_id}_os_info"
+
+    case OsInfoMeasurer.start(session_dir, prefix, @os_info_interval_ms) do
+      :ok ->
+        try do
+          measure_fun.()
+        after
+          case OsInfoMeasurer.stop() do
+            :ok -> :ok
+            {:error, reason} -> IO.warn("os_info measurement stop failed: #{inspect(reason)}")
+          end
+        end
+
+      {:error, reason} ->
+        IO.warn("os_info measurement start failed: #{inspect(reason)}")
+        measure_fun.()
     end
   end
 

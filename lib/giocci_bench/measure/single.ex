@@ -26,7 +26,7 @@ defmodule GiocciBench.Measure.Single do
 
   @default_warmup 1
   @default_iterations 5
-  @default_timeout_ms 5_000
+  @default_timeout_ms 10_000
   @default_out_dir "giocci_bench_output"
   @default_cases ["register_client", "save_module", "exec_func", "local_exec"]
   @default_ping true

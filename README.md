@@ -214,19 +214,3 @@ mix giocci_bench.single --os-info
 - `--include-timestamps` - 計算元タイムスタンプ列をCSVに含める（デフォルト: 無効）
 - `--os-info` - OS情報計測を有効化（100ms周期、warmup後〜計測完了まで、デフォルト: 無効）
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `giocci_bench` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:giocci_bench, "~> 0.1.0"}
-  ]
-end
-```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/giocci_bench>.

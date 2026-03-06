@@ -6,7 +6,7 @@ defmodule GiocciBench.Samples.BenchmarkBehaviour do
 
   Each implementation must:
   1. Accept arguments as a list
-  2. Measure execution time using System.monotonic_time()
+  2. Measure execution time using System.os_time()
   3. Return a tuple {result, elapsed_ms} where:
      - result: The result of the operation
      - elapsed_ms: Time taken in milliseconds (as float with 3 decimal places)

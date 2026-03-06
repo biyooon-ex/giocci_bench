@@ -6,12 +6,12 @@ defmodule GiocciBench.Samples.Add do
   @spec run(list()) :: {integer(), float()}
   @impl true
   def run([a, b]) do
-    start_time = System.monotonic_time()
+    start_time = System.os_time()
     result = a + b
+    end_time = System.os_time()
 
     elapsed_ms =
-      System.monotonic_time()
-      |> Kernel.-(start_time)
+      (end_time - start_time)
       |> System.convert_time_unit(:native, :microsecond)
       |> Kernel./(1000)
       |> Float.round(3)

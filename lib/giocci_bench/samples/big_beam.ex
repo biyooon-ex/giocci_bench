@@ -19,9 +19,9 @@ defmodule GiocciBench.Samples.BigBeam do
   @spec run(list()) :: {any(), float()}
   @impl true
   def run([]) do
-    start_time = System.monotonic_time()
+    start_time = System.os_time()
     result = File.write!("/dev/null", @big_binary)
-    end_time = System.monotonic_time()
+    end_time = System.os_time()
 
     elapsed_ms =
       (end_time - start_time)

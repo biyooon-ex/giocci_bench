@@ -18,9 +18,9 @@ defmodule GiocciBench.Samples.MemoryEater do
   @spec run(list()) :: {any(), float()}
   @impl true
   def run([]) do
-    start_time = System.monotonic_time()
+    start_time = System.os_time()
     result = alloc_memory(1000, 10)
-    end_time = System.monotonic_time()
+    end_time = System.os_time()
 
     elapsed_ms =
       (end_time - start_time)

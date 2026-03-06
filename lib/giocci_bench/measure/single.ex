@@ -279,9 +279,9 @@ defmodule GiocciBench.Measure.Single do
   end
 
   defp timed_call(fun, measure_to) do
-    start_time = System.monotonic_time()
+    start_time = System.os_time()
     result = fun.(measure_to)
-    end_time = System.monotonic_time()
+    end_time = System.os_time()
 
     case result do
       {:error, reason} ->

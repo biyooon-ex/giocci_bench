@@ -8,7 +8,7 @@ defmodule GiocciBench.OutputTest do
     path = Path.join(tmp_dir, "meta.json")
 
     metadata = %{
-      "run_id" => "1234567890",
+      "run_id" => "20260309-140530",
       "started_at" => "2026-02-17T10:00:00Z",
       "elixir_version" => "1.14.0",
       "otp_version" => "24.0",

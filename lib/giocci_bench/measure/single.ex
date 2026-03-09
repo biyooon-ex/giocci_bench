@@ -393,8 +393,7 @@ defmodule GiocciBench.Measure.Single do
 
   defp build_run_id do
     DateTime.utc_now()
-    |> DateTime.to_unix(:millisecond)
-    |> Integer.to_string()
+    |> Calendar.strftime("%Y%m%d-%H%M%S")
   end
 
   defp default_relay do

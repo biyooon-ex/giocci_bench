@@ -86,43 +86,30 @@ defmodule GiocciBench.Measure.Single do
     env = env_info()
     selected_cases = normalize_cases(fetch_option(opts, :cases, @default_cases))
 
-    # local_exec の case_desc を動的に生成
-    local_exec_desc = "#{Module.split(module) |> Enum.join(".")}.#{func}/#{length(args)}"
-
-    # ベンチマーク対象の3つのケースを定義
-    # 各要素は {case_id, case_desc, fun} のタプル：
+    # ベンチマーク対象のケースを定義
+    # 各要素は {case_id, mfargs} のタプル：
     #   - case_id: ケースの識別子（文字列）。結果CSVで使用、filter時の判定キー
-    #   - case_desc: Giocciのメソッドシグネチャなど、ケース説明（文字列）。CSV出力に含まれる
-    #   - fun: 実際に実行する無名関数。warmup_runs と measure_iterations で呼び出される
-    #         measure_to オプションは呼び出し側で決定
+    #   - mfargs: {module, function, args} を表すタプル
     cases = [
-      {"register_client", "Giocci.register_client/2",
-       fn measure_to ->
-         Giocci.register_client(relay_name, timeout: timeout_ms, measure_to: measure_to)
-       end},
-      {"save_module", "Giocci.save_module/3",
-       fn measure_to ->
-         Giocci.save_module(relay_name, module, timeout: timeout_ms, measure_to: measure_to)
-       end},
-      {"exec_func", "Giocci.exec_func/3",
-       fn measure_to ->
-         Giocci.exec_func(relay_name, mfargs, timeout: timeout_ms, measure_to: measure_to)
-       end},
-      {"local_exec", local_exec_desc, fn _measure_to -> apply(module, func, args) end}
+      {"register_client",
+       {Giocci, :register_client, [relay_name, [timeout: timeout_ms, measure_to: nil]]}},
+      {"save_module",
+       {Giocci, :save_module, [relay_name, module, [timeout: timeout_ms, measure_to: nil]]}},
+      {"exec_func",
+       {Giocci, :exec_func, [relay_name, mfargs, [timeout: timeout_ms, measure_to: nil]]}},
+      {"local_exec", {module, func, args}}
     ]
 
-    filtered_cases =
-      cases
-      |> Enum.filter(fn {case_id, _case_desc, _fun} -> case_id in selected_cases end)
+    filtered_cases = Enum.filter(cases, fn {case_id, _mfargs} -> case_id in selected_cases end)
 
     # セッションディレクトリを作成
     session_dir = Path.join(out_dir, "session_#{run_id}")
     File.mkdir_p!(session_dir)
 
-    # case_id → case_desc のマップを作成
+    # case_id → mfargs のマップを作成
     cases_mapping =
       filtered_cases
-      |> Enum.map(fn {case_id, case_desc, _fun} -> {case_id, case_desc} end)
+      |> Enum.map(fn {case_id, mfargs} -> {case_id, inspect(mfargs)} end)
       |> Map.new()
 
     # メタデータを JSON に出力
@@ -154,27 +141,18 @@ defmodule GiocciBench.Measure.Single do
 
     filtered_cases
     |> Enum.with_index(1)
-    |> Enum.each(fn {{case_id, case_desc, fun}, case_index} ->
-      case_display =
-        if case_id in ["exec_func", "local_exec"] do
-          {module, func, args} = mfargs
-
-          "#{case_desc} (module: #{inspect(module)}, func: #{inspect(func)}, args: #{inspect(args)})"
-        else
-          case_desc
-        end
-
-      IO.puts("[#{case_index}/#{total_cases}] #{case_display}")
+    |> Enum.each(fn {{case_id, mfargs}, case_index} ->
+      IO.puts("[#{case_index}/#{total_cases}] #{case_id}")
       :ok = prepare_case(case_id, relay_name, module, timeout_ms)
-      :ok = warmup_runs(warmup, fun, case_id)
+      :ok = warmup_runs(warmup, mfargs, case_id)
 
       rows =
         if os_info do
           measure_with_os_info(session_dir, case_id, fn ->
-            measure_iterations(case_id, iterations, fun, run_id, warmup, columns)
+            measure_iterations(case_id, iterations, mfargs, run_id, warmup, columns)
           end)
         else
-          measure_iterations(case_id, iterations, fun, run_id, warmup, columns)
+          measure_iterations(case_id, iterations, mfargs, run_id, warmup, columns)
         end
 
       # 各 case_id ごとに CSV ファイルに出力
@@ -208,11 +186,14 @@ defmodule GiocciBench.Measure.Single do
   # warmup: JIT コンパイルやキャッシュの初期化など、最初の実行による異常値を避けるため
   # 実際の計測前に数回実行して、システムを安定状態に導く
   # warmup では測定値を取得しないため measure_to: nil を渡す
-  defp warmup_runs(count, fun, _case_id) when count > 0 do
+  defp warmup_runs(count, mfargs, _case_id) when count > 0 do
     IO.write("  Warmup: ")
 
+    measure_to = nil
+
     for _ <- 1..count do
-      fun.(nil)
+      {mod, func, args} = ensure_measure_to(mfargs, measure_to)
+      apply(mod, func, args)
       IO.write(".")
     end
 
@@ -220,12 +201,12 @@ defmodule GiocciBench.Measure.Single do
     :ok
   end
 
-  defp warmup_runs(_count, _fun, _case_id), do: :ok
+  defp warmup_runs(_count, _mfargs, _case_id), do: :ok
 
   defp measure_iterations(
          case_id,
          iterations,
-         fun,
+         mfargs,
          run_id,
          warmup_count,
          columns
@@ -233,10 +214,11 @@ defmodule GiocciBench.Measure.Single do
     IO.write("  Measuring: ")
 
     measure_to = if case_id == "local_exec", do: nil, else: self()
+    mfargs = ensure_measure_to(mfargs, measure_to)
 
     results =
       for iteration <- 1..iterations do
-        {elapsed_ms, result} = timed_call(fun, measure_to)
+        {elapsed_ms, result} = timed_call(mfargs)
 
         # giocci から測定値を受信
         measurements =
@@ -278,9 +260,9 @@ defmodule GiocciBench.Measure.Single do
     results
   end
 
-  defp timed_call(fun, measure_to) do
+  defp timed_call({mod, func, args}) do
     start_time = System.os_time()
-    result = fun.(measure_to)
+    result = apply(mod, func, args)
     end_time = System.os_time()
 
     case result do
@@ -296,6 +278,19 @@ defmodule GiocciBench.Measure.Single do
 
         {elapsed_ms, result}
     end
+  end
+
+  defp ensure_measure_to({mod, func, args}, measure_to) when is_list(args) do
+    updated_args =
+      with opts when is_list(opts) <- List.last(args),
+           true <- Keyword.keyword?(opts),
+           true <- Keyword.has_key?(opts, :measure_to) do
+        List.replace_at(args, -1, Keyword.put(opts, :measure_to, measure_to))
+      else
+        _ -> args
+      end
+
+    {mod, func, updated_args}
   end
 
   defp measure_with_os_info(session_dir, case_id, measure_fun) when is_function(measure_fun, 0) do

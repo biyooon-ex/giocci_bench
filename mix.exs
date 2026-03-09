@@ -23,7 +23,8 @@ defmodule GiocciBench.MixProject do
     [
       {:giocci, path: "../giocci_platform/apps/giocci", runtime: Mix.env() != :test},
       {:nimble_csv, "~> 1.2"},
-      {:os_info_measurer, git: "https://github.com/b5g-ex/os_info_measurer.git", tag: "v0.1.3"}
+      {:os_info_measurer,
+       git: "https://github.com/biyooon-ex/os_info_measurer.git", tag: "v0.1.3"}
     ]
   end
 end

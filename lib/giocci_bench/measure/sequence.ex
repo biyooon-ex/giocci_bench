@@ -36,7 +36,6 @@ defmodule GiocciBench.Measure.Sequence do
   def run(opts \\ []) do
     relay_name = fetch_option(opts, :relay_name, default_relay())
     mfargs = fetch_option(opts, :mfargs, default_mfargs())
-    {module, _func, _args} = mfargs
     warmup = fetch_option(opts, :warmup, @default_warmup)
     iterations = fetch_option(opts, :iterations, @default_iterations)
     timeout_ms = fetch_option(opts, :timeout_ms, @default_timeout_ms)
@@ -50,7 +49,7 @@ defmodule GiocciBench.Measure.Sequence do
     started_at = DateTime.utc_now() |> DateTime.to_iso8601()
     env = env_info()
 
-    exec_mfargs = {Giocci, :exec_func, [relay_name, mfargs, [timeout: timeout_ms]]}
+    exec_mfargs_for_meta = {Giocci, :exec_func, [relay_name, mfargs, [timeout: timeout_ms]]}
 
     # セッションディレクトリを作成
     session_dir = Path.join(out_dir, "session_#{run_id}")
@@ -65,7 +64,7 @@ defmodule GiocciBench.Measure.Sequence do
       "os_type" => env.os_type,
       "system_arch" => env.system_arch,
       "cpu_cores" => env.cpu_cores,
-      "cases" => %{"sequence" => inspect(exec_mfargs)}
+      "cases" => %{"sequence" => inspect(exec_mfargs_for_meta)}
     }
 
     meta_path = Path.join(session_dir, "meta.json")
@@ -80,31 +79,15 @@ defmodule GiocciBench.Measure.Sequence do
     IO.puts("Warmup iterations: #{warmup}, Measurement iterations: #{iterations}\n")
 
     IO.puts("[1/1] sequence")
-    :ok = warmup_runs(warmup, relay_name, module, exec_mfargs, timeout_ms)
+    :ok = warmup_runs(warmup, relay_name, mfargs, timeout_ms)
 
     rows =
       if os_info do
         measure_with_os_info(session_dir, "sequence", fn ->
-          measure_iterations(
-            iterations,
-            relay_name,
-            module,
-            exec_mfargs,
-            run_id,
-            warmup,
-            timeout_ms
-          )
+          measure_iterations(iterations, relay_name, mfargs, run_id, warmup, timeout_ms)
         end)
       else
-        measure_iterations(
-          iterations,
-          relay_name,
-          module,
-          exec_mfargs,
-          run_id,
-          warmup,
-          timeout_ms
-        )
+        measure_iterations(iterations, relay_name, mfargs, run_id, warmup, timeout_ms)
       end
 
     csv_path = Path.join(session_dir, "sequence.csv")
@@ -135,11 +118,11 @@ defmodule GiocciBench.Measure.Sequence do
 
   # warmup: JIT コンパイルやキャッシュの初期化など、最初の実行による異常値を避けるため
   # 実際の計測前に数回実行して、システムを安定状態に導く
-  defp warmup_runs(count, relay_name, module, exec_mfargs, timeout_ms) when count > 0 do
+  defp warmup_runs(count, relay_name, mfargs, timeout_ms) when count > 0 do
     IO.write("  Warmup: ")
 
     for _ <- 1..count do
-      case run_sequence_once(relay_name, module, exec_mfargs, timeout_ms) do
+      case run_sequence_once(relay_name, mfargs, timeout_ms) do
         {:ok, _result} ->
           :ok
 
@@ -154,25 +137,14 @@ defmodule GiocciBench.Measure.Sequence do
     :ok
   end
 
-  defp warmup_runs(_count, _relay_name, _module, _exec_mfargs, _timeout_ms), do: :ok
+  defp warmup_runs(_count, _relay_name, _mfargs, _timeout_ms), do: :ok
 
-  defp measure_iterations(
-         iterations,
-         relay_name,
-         module,
-         exec_mfargs,
-         run_id,
-         warmup_count,
-         timeout_ms
-       ) do
+  defp measure_iterations(iterations, relay_name, mfargs, run_id, warmup_count, timeout_ms) do
     IO.write("  Measuring: ")
 
     rows =
       for iteration <- 1..iterations do
-        {elapsed_ms, sequence_result} =
-          timed_sequence_call(fn ->
-            run_sequence_once(relay_name, module, exec_mfargs, timeout_ms)
-          end)
+        {elapsed_ms, sequence_result} = timed_sequence_call(relay_name, mfargs, timeout_ms)
 
         values =
           case sequence_result do
@@ -207,10 +179,10 @@ defmodule GiocciBench.Measure.Sequence do
     rows
   end
 
-  defp run_sequence_once(relay_name, module, exec_mfargs, timeout_ms) do
+  defp run_sequence_once(relay_name, {m, _f, _args} = mfargs, timeout_ms) do
     with :ok <- Giocci.register_client(relay_name, timeout: timeout_ms),
-         :ok <- Giocci.save_module(relay_name, module, timeout: timeout_ms) do
-      case call_mfargs(exec_mfargs) do
+         :ok <- Giocci.save_module(relay_name, m, timeout: timeout_ms) do
+      case Giocci.exec_func(relay_name, mfargs, timeout: timeout_ms) do
         {:error, reason} -> {:error, reason}
         result -> {:ok, result}
       end
@@ -219,9 +191,9 @@ defmodule GiocciBench.Measure.Sequence do
     end
   end
 
-  defp timed_sequence_call(fun) when is_function(fun, 0) do
+  defp timed_sequence_call(relay_name, mfargs, timeout_ms) do
     start_time = System.os_time()
-    result = fun.()
+    result = run_sequence_once(relay_name, mfargs, timeout_ms)
     end_time = System.os_time()
 
     elapsed_ms =
@@ -231,10 +203,6 @@ defmodule GiocciBench.Measure.Sequence do
       |> Float.round(3)
 
     {elapsed_ms, result}
-  end
-
-  defp call_mfargs({mod, func, args}) do
-    apply(mod, func, args)
   end
 
   defp extract_function_elapsed_ms({_value, function_time}), do: function_time

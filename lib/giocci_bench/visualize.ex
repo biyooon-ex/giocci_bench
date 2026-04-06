@@ -51,6 +51,8 @@ defmodule GiocciBench.Visualize do
   end
 
   defp build_report_data(session_dir, csv_files) do
+    metadata = read_session_metadata(session_dir)
+
     sections =
       csv_files
       |> Enum.map(&build_section/1)
@@ -60,9 +62,29 @@ defmodule GiocciBench.Visualize do
       "title" => "Giocci Bench Visualization",
       "session_dir" => Path.basename(session_dir),
       "generated_at" => DateTime.utc_now() |> DateTime.to_iso8601(),
+      "mfargs" => read_session_mfargs(metadata),
       "sections" => sections
     }
-    |> maybe_put_session_title(read_session_title(session_dir))
+    |> maybe_put_session_title(read_session_title(metadata))
+  end
+
+  defp read_session_metadata(session_dir) do
+    meta_path = Path.join(session_dir, "meta.json")
+
+    with true <- File.exists?(meta_path),
+         {:ok, content} <- File.read(meta_path),
+         metadata when is_map(metadata) <- :json.decode(content) do
+      metadata
+    else
+      _ -> %{}
+    end
+  end
+
+  defp read_session_mfargs(metadata) when is_map(metadata) do
+    case Map.get(metadata, "cases") do
+      cases when is_map(cases) -> cases
+      _ -> %{}
+    end
   end
 
   defp maybe_put_session_title(report_data, nil), do: report_data
@@ -72,16 +94,13 @@ defmodule GiocciBench.Visualize do
   defp maybe_put_session_title(report_data, title),
     do: Map.put(report_data, "session_title", title)
 
-  defp read_session_title(session_dir) do
-    meta_path = Path.join(session_dir, "meta.json")
+  defp read_session_title(metadata) when is_map(metadata) do
+    case Map.get(metadata, "title") do
+      title when is_binary(title) ->
+        String.trim(title)
 
-    with true <- File.exists?(meta_path),
-         {:ok, content} <- File.read(meta_path),
-         metadata when is_map(metadata) <- :json.decode(content),
-         title when is_binary(title) <- Map.get(metadata, "title") do
-      String.trim(title)
-    else
-      _ -> nil
+      _ ->
+        nil
     end
   end
 
@@ -489,6 +508,9 @@ defmodule GiocciBench.Visualize do
           h1 { margin: 0; font-size: 28px; letter-spacing: 0.02em; }
           .report-title { margin-top: 8px; color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
           .meta { margin-top: 10px; color: var(--muted); font-size: 14px; }
+          .mfargs { margin-top: 10px; background: #f8fbff; border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px; color: #334155; }
+          .mfargs-title { font-weight: 600; margin-bottom: 6px; }
+          .mfargs-row { margin-top: 4px; word-break: break-word; }
 
           section {
             background: var(--card);
@@ -636,10 +658,19 @@ defmodule GiocciBench.Visualize do
             const app = document.getElementById('app');
             const pendingCharts = [];
 
+            const mfargRows = Object.entries(DATA.mfargs || {}).map(function(entry) {
+              return el('div', { class: 'mfargs-row' }, entry[0] + ': ' + entry[1]);
+            });
+
+            const mfargBlock = mfargRows.length > 0
+              ? el('div', { class: 'mfargs' }, [el('div', { class: 'mfargs-title' }, 'MFArgs')].concat(mfargRows))
+              : null;
+
             const header = el('header', {}, [
               el('h1', {}, DATA.session_title || DATA.title),
               DATA.session_title ? el('div', { class: 'report-title' }, DATA.title) : null,
-              el('div', { class: 'meta' }, 'session: ' + DATA.session_dir + ' | generated_at: ' + DATA.generated_at)
+              el('div', { class: 'meta' }, 'session: ' + DATA.session_dir + ' | generated_at: ' + DATA.generated_at),
+              mfargBlock
             ]);
             app.appendChild(header);
 

@@ -95,8 +95,11 @@ giocci_bench_output/
 ```
 
 - 出力先ディレクトリのデフォルトは `giocci_bench_output`
-- `session_<run_id>` ディレクトリ名は実行開始時刻（UTC）を `YYYYMMDD-HHMMSS` 形式にしたもの
-- `--title` 指定時は `session_<run_id>_<title>` 形式になり、`/` と `\` は `_` に置換
+- `run_id` は実行開始時刻（UTC）の `YYYYMMDD-HHMMSS` 形式
+- 単体計測のディレクトリ名は `session_<run_id>-single`
+- シーケンス計測のディレクトリ名は `session_<run_id>-sequence`
+- ローカル比較計測のディレクトリ名は `session_<run_id>-local`
+- `--title` 指定時は `session_<run_id>-<task>-<title>` 形式になり、`/` と `\` は `_` に置換
 - 単体計測結果は `case_id` ごとに別ファイルに分割（例: `register_client.csv`, `save_module.csv`）
 - シーケンス計測結果は `sequence.csv` に出力
 - `--os-info` 指定時は実行モードに応じた OS 情報 CSV（`*_os_info_free.csv`, `*_os_info_proc_stat.csv`）を同じディレクトリに保存
@@ -106,6 +109,7 @@ giocci_bench_output/
 計測セッション全体の環境情報と、計測ケース説明を JSON で記録します。
 
 - `cases` には各ケースの実行時の `{module, function, args}` を `inspect/1` で文字列化した値が記録されます。
+- `measure_mfargs` には設定/実行時に使った計測対象 mfargs（`config/config.exs` の `measure_mfargs` など）が `inspect/1` で記録されます。
 - giocci のケースは引数末尾のオプション（`timeout` と `measure_to`）も含まれます。
 - 単体計測では `measure_to` は meta.json では `nil` で記録されますが、実行時には計測用 PID が注入されます。
 - `--title` 指定時は `title` フィールドが meta.json に追加されます。
@@ -402,6 +406,13 @@ mix giocci_bench.visualize --open
 - OS 情報 CSV（`*_os_info_free.csv`, `*_os_info_proc_stat.csv`）
 
 レポートには折れ線グラフと、各列の基本統計（count, mean, median, min, max, stddev）が含まれます。
+
+ヘッダには以下の情報が表示されます。
+
+- セッションタイトル（`meta.json` の `title` がある場合）
+- タイトル未指定時は `meta.json` の `measure_mfargs` を見出し文字列として表示
+- セッションディレクトリ名とレポート生成時刻
+- 計測対象の MFArgs（`meta.json` の `cases`）
 
 ## Docker での実行
 

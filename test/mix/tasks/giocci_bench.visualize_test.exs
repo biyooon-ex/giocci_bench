@@ -27,7 +27,11 @@ defmodule Mix.Tasks.GiocciBench.VisualizeTest do
     ]
 
     File.write!(Path.join(session_dir, "sequence.csv"), Enum.join(csv, "\n"))
-    File.write!(Path.join(session_dir, "meta.json"), ~s({"title":"nightly"}))
+
+    File.write!(
+      Path.join(session_dir, "meta.json"),
+      ~s({"title":"nightly","cases":{"sequence":"{Giocci, :exec_func, [\"relay\", {M, :run, [[1,2]]}, [timeout: 5000]]}"}})
+    )
 
     VisualizeTask.run(["--session-dir", session_dir])
 
@@ -37,6 +41,8 @@ defmodule Mix.Tasks.GiocciBench.VisualizeTest do
     report = File.read!(report_path)
     assert report =~ "\"name\": \"elapsed_ms\""
     assert report =~ "\"session_title\": \"nightly\""
+    assert report =~ "\"mfargs\""
+    assert report =~ "\"sequence\""
 
     assert_receive {:mix_shell, :info, [message]}
     assert message =~ "visualization report created:"
@@ -64,5 +70,28 @@ defmodule Mix.Tasks.GiocciBench.VisualizeTest do
 
     assert File.exists?(Path.join(newer, "report.html"))
     refute File.exists?(Path.join(older, "report.html"))
+  end
+
+  @tag :tmp_dir
+  test "uses default report title when title is missing", %{tmp_dir: tmp_dir} do
+    session_dir = Path.join(tmp_dir, "session_20260406-120100")
+    File.mkdir_p!(session_dir)
+
+    File.write!(
+      Path.join(session_dir, "sequence.csv"),
+      "run_id,case_id,iteration,elapsed_ms\n1,sequence,1,1.0\n"
+    )
+
+    File.write!(
+      Path.join(session_dir, "meta.json"),
+      ~s({"measure_mfargs":"{GiocciBench.Samples.Sieve, :run, [[1000000]]}","cases":{"sequence":"{Giocci, :exec_func, [\"relay\", {GiocciBench.Samples.Sieve, :run, [[1000000]]}, [timeout: 5000]]}"}})
+    )
+
+    VisualizeTask.run(["--session-dir", session_dir])
+
+    report = File.read!(Path.join(session_dir, "report.html"))
+    refute report =~ "\"display_title\""
+    assert report =~ "\"title\": \"Giocci Bench Visualization\""
+    assert report =~ "\"mfargs\""
   end
 end

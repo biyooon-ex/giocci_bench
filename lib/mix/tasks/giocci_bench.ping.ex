@@ -12,8 +12,8 @@ defmodule Mix.Tasks.GiocciBench.Ping do
 
     * `--targets` - Comma-separated target IPs (default: 127.0.0.1)
     * `--count` - Number of pings per target (default: 5)
-    * `--timeout_ms` - Ping timeout in milliseconds (default: 1000)
-    * `--out_dir` - Output directory for CSV (default: giocci_bench_output)
+    * `--timeout-ms` - Ping timeout in milliseconds (default: 1000)
+    * `--out-dir` - Output directory for CSV (default: giocci_bench_output)
     * `--title` - Title suffix for session directory
 
   """

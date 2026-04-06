@@ -281,8 +281,12 @@ defmodule GiocciBench.Measure.Sequence do
   defp default_mfargs do
     Application.get_env(
       :giocci_bench,
-      :sequence_measure_mfargs,
-      {GiocciBench.Samples.Add, :run, [[1, 2]]}
+      :measure_mfargs,
+      Application.get_env(
+        :giocci_bench,
+        :sequence_measure_mfargs,
+        {GiocciBench.Samples.Add, :run, [[1, 2]]}
+      )
     )
   end
 end

@@ -252,11 +252,15 @@ defmodule GiocciBench.Measure.Local do
   defp default_mfargs do
     Application.get_env(
       :giocci_bench,
-      :local_measure_mfargs,
+      :measure_mfargs,
       Application.get_env(
         :giocci_bench,
-        :single_measure_mfargs,
-        {GiocciBench.Samples.Add, :run, [[1, 2]]}
+        :local_measure_mfargs,
+        Application.get_env(
+          :giocci_bench,
+          :single_measure_mfargs,
+          {GiocciBench.Samples.Add, :run, [[1, 2]]}
+        )
       )
     )
   end

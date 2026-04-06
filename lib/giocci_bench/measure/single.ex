@@ -202,6 +202,18 @@ defmodule GiocciBench.Measure.Single do
   defp warmup_runs(_count, _mfargs, _case_id), do: :ok
 
   defp measure_iterations(
+         _case_id,
+         iterations,
+         _mfargs,
+         _run_id,
+         _warmup_count,
+         _columns
+       )
+       when iterations < 1 do
+    raise ArgumentError, "iterations must be >= 1, got: #{iterations}"
+  end
+
+  defp measure_iterations(
          case_id,
          iterations,
          mfargs,

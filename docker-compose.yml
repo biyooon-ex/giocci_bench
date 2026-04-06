@@ -17,9 +17,5 @@ services:
       ZENOHD_CONNECT_ENDPOINTS: ${ZENOHD_CONNECT_ENDPOINTS:-}
     volumes:
       - .:/workspace
-      - mix-home:/home/${LOCAL_USER:-dev}/.mix
-      - hex-home:/home/${LOCAL_USER:-dev}/.hex
-
-volumes:
-  mix-home:
-  hex-home:
+      - ./.mix:/home/${LOCAL_USER:-dev}/.mix
+      - ./.hex:/home/${LOCAL_USER:-dev}/.hex

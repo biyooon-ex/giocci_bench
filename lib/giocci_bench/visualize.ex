@@ -62,6 +62,27 @@ defmodule GiocciBench.Visualize do
       "generated_at" => DateTime.utc_now() |> DateTime.to_iso8601(),
       "sections" => sections
     }
+    |> maybe_put_session_title(read_session_title(session_dir))
+  end
+
+  defp maybe_put_session_title(report_data, nil), do: report_data
+  defp maybe_put_session_title(report_data, ""), do: report_data
+  defp maybe_put_session_title(report_data, "nil"), do: report_data
+
+  defp maybe_put_session_title(report_data, title),
+    do: Map.put(report_data, "session_title", title)
+
+  defp read_session_title(session_dir) do
+    meta_path = Path.join(session_dir, "meta.json")
+
+    with true <- File.exists?(meta_path),
+         {:ok, content} <- File.read(meta_path),
+         metadata when is_map(metadata) <- :json.decode(content),
+         title when is_binary(title) <- Map.get(metadata, "title") do
+      String.trim(title)
+    else
+      _ -> nil
+    end
   end
 
   defp build_section(path) do
@@ -466,6 +487,7 @@ defmodule GiocciBench.Visualize do
           main { max-width: 1200px; margin: 0 auto; padding: 24px 16px 56px; }
           header { margin-bottom: 18px; }
           h1 { margin: 0; font-size: 28px; letter-spacing: 0.02em; }
+          .report-title { margin-top: 8px; color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
           .meta { margin-top: 10px; color: var(--muted); font-size: 14px; }
 
           section {
@@ -615,7 +637,8 @@ defmodule GiocciBench.Visualize do
             const pendingCharts = [];
 
             const header = el('header', {}, [
-              el('h1', {}, DATA.title),
+              el('h1', {}, DATA.session_title || DATA.title),
+              DATA.session_title ? el('div', { class: 'report-title' }, DATA.title) : null,
               el('div', { class: 'meta' }, 'session: ' + DATA.session_dir + ' | generated_at: ' + DATA.generated_at)
             ]);
             app.appendChild(header);

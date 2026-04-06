@@ -27,6 +27,7 @@ defmodule Mix.Tasks.GiocciBench.VisualizeTest do
     ]
 
     File.write!(Path.join(session_dir, "sequence.csv"), Enum.join(csv, "\n"))
+    File.write!(Path.join(session_dir, "meta.json"), ~s({"title":"nightly"}))
 
     VisualizeTask.run(["--session-dir", session_dir])
 
@@ -35,6 +36,7 @@ defmodule Mix.Tasks.GiocciBench.VisualizeTest do
 
     report = File.read!(report_path)
     assert report =~ "\"name\": \"elapsed_ms\""
+    assert report =~ "\"session_title\": \"nightly\""
 
     assert_receive {:mix_shell, :info, [message]}
     assert message =~ "visualization report created:"

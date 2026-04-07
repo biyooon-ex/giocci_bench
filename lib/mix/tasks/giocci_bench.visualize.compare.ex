@@ -11,7 +11,7 @@ defmodule Mix.Tasks.GiocciBench.Visualize.Compare do
 
   ## Options
 
-    * `--session-dir` - Session directory to include (repeatable, at least two)
+    * `--session-dir` - Session directory to include (repeatable, at least two; wildcard supported)
     * `--out-dir` - Root output directory (default: giocci_bench_output)
     * `--output` - Output HTML path (default: <out_dir>/comparison_<timestamp>/report.html)
     * `--open` - Open generated HTML in default browser
@@ -77,8 +77,20 @@ defmodule Mix.Tasks.GiocciBench.Visualize.Compare do
       |> String.split(",")
       |> Enum.map(&String.trim/1)
       |> Enum.reject(&(&1 == ""))
+      |> Enum.flat_map(&expand_session_dir/1)
     end)
     |> Enum.uniq()
+  end
+
+  defp expand_session_dir(path) do
+    if String.contains?(path, ["*", "?", "["]) do
+      case Path.wildcard(path) do
+        [] -> [path]
+        matches -> matches
+      end
+    else
+      [path]
+    end
   end
 
   defp open_in_browser(path) do

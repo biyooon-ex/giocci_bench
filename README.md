@@ -437,16 +437,21 @@ mix giocci_bench.visualize.compare \
   --session-dir giocci_bench_output/session_20260407-100000-sequence-nightly \
   --session-dir giocci_bench_output/session_20260407-101000-sequence-baseline \
   --output tmp/compare_report.html
+
+# ワイルドカード指定（ "" 囲み必須）
+mix giocci_bench.visualize.compare \
+  --session-dir "giocci_bench_output/session_20260407-10*-sequence-*"
 ```
 
 `mix giocci_bench.visualize.compare` の主な仕様:
 
 - `--session-dir` を2つ以上指定して比較（同一 Mix タスク種別のセッションのみ許可）
+  - `*`, `?`, `[]` のワイルドカード指定に対応（展開結果が比較対象）
   - セッションが異なる種別（single/sequence/local）ならエラー
 - `--os-info` で取得した CSV（`*_os_info_free.csv`, `*_os_info_proc_stat.csv`）も箱ひげ図で比較
   - 指定したセッションのいずれかに os-info CSV が不足している場合は、不足セッション名を含めてエラー
   - `*_os_info_proc_stat.csv` は単一セッション可視化と同じく、差分から算出した `cpu_usage_pct`（%）を比較
-- 凡例ラベルは各 `meta.json` の `title` を優っk
+- 凡例ラベルは各 `meta.json` の `title` を優先
   - `title` がない場合は `A`, `B`, ... で代用
 - 比較レポートの既定出力先は `giocci_bench_output/comparison_<日時>/report.html`
 - 各比較グラフについて CSV/SVG を `giocci_bench_output/comparison_<日時>/report/` に出力

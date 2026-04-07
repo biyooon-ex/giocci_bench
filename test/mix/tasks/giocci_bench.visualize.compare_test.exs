@@ -78,6 +78,43 @@ defmodule Mix.Tasks.GiocciBench.Visualize.CompareTest do
   end
 
   @tag :tmp_dir
+  test "expands wildcard in --session-dir", %{tmp_dir: tmp_dir} do
+    out_dir = Path.join(tmp_dir, "giocci_bench_output")
+    s1 = Path.join(out_dir, "session_20260407-130000-local-a")
+    s2 = Path.join(out_dir, "session_20260407-130100-local-b")
+    File.mkdir_p!(s1)
+    File.mkdir_p!(s2)
+
+    data_csv =
+      "run_id,case_id,iteration,elapsed_ms,function_elapsed_ms,warmup\n" <>
+        "1,local_exec,1,10.0,8.0,1\n" <>
+        "1,local_exec,2,12.0,9.0,1\n"
+
+    os_info_free = "time[ms],total[KiB]\n1000,1000\n1100,1001\n"
+    os_info_proc = "time[ms],user,system,idle\n1000,10,3,90\n1100,11,4,91\n"
+
+    File.write!(Path.join(s1, "local_exec.csv"), data_csv)
+    File.write!(Path.join(s2, "local_exec.csv"), data_csv)
+    File.write!(Path.join(s1, "local_exec_os_info_free.csv"), os_info_free)
+    File.write!(Path.join(s2, "local_exec_os_info_free.csv"), os_info_free)
+    File.write!(Path.join(s1, "local_exec_os_info_proc_stat.csv"), os_info_proc)
+    File.write!(Path.join(s2, "local_exec_os_info_proc_stat.csv"), os_info_proc)
+
+    output = Path.join(tmp_dir, "comparison_glob/report.html")
+
+    CompareTask.run([
+      "--session-dir",
+      Path.join(out_dir, "session_20260407-130*-local-*"),
+      "--output",
+      output
+    ])
+
+    assert File.exists?(output)
+    report = File.read!(output)
+    assert report =~ "\"mode\": \"local\""
+  end
+
+  @tag :tmp_dir
   test "raises when mixed benchmark session types are given", %{tmp_dir: tmp_dir} do
     out_dir = Path.join(tmp_dir, "giocci_bench_output")
     sequence_session = Path.join(out_dir, "session_20260407-110000-sequence")

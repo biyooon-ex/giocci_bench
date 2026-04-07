@@ -12,4 +12,10 @@ config :giocci_bench,
   # you must wrap it: [[arg1, arg2, ...]] not [arg1, arg2, ...]
   # Example: For Sieve.run([1_000_000]), use [[1_000_000]]
   #          For Add.run([1, 2]), use [[1, 2]]
+  # List of implemented mfargs in lib/giocci_bench/samples/*.ex:
+  # measure_mfargs: {GiocciBench.Samples.Add, :run, [[1, 2]]}
+  # measure_mfargs: {GiocciBench.Samples.Sieve, :run, [[1_000_000]]}
+  # measure_mfargs: {GiocciBench.Samples.BigBeam, :run, [[]]}
+  # measure_mfargs: {GiocciBench.Samples.CpuEater, :run, [[]]}
+  # measure_mfargs: {GiocciBench.Samples.MemoryEater, :run, [[]]}
   measure_mfargs: {GiocciBench.Samples.Sieve, :run, [[1_000_000]]}

@@ -22,6 +22,7 @@ defmodule Mix.Tasks.GiocciBench.Single do
     * `--ping-count` - Number of pings per target (default: 5)
     * `--include-timestamps` - Include raw measurement timestamp columns in CSV (default: disabled)
     * `--os-info` - Measure OS info around each case measurement and save CSV (default: disabled)
+    * `--visualize` - Generate HTML report after measurement (default: disabled)
 
   """
 
@@ -43,7 +44,8 @@ defmodule Mix.Tasks.GiocciBench.Single do
           ping_targets: :string,
           ping_count: :integer,
           include_timestamps: :boolean,
-          os_info: :boolean
+          os_info: :boolean,
+          visualize: :boolean
         ]
       )
 
@@ -59,6 +61,7 @@ defmodule Mix.Tasks.GiocciBench.Single do
     ping_count = Keyword.get(opts, :ping_count)
     include_timestamps = Keyword.get(opts, :include_timestamps, false)
     os_info = Keyword.get(opts, :os_info, false)
+    visualize = Keyword.get(opts, :visualize, false)
 
     {:ok, session_dir} =
       Single.run(
@@ -77,7 +80,16 @@ defmodule Mix.Tasks.GiocciBench.Single do
       )
 
     Mix.shell().info("measurement session created: #{session_dir}")
+
+    if visualize do
+      visualize_args = build_visualize_args(out_dir)
+      Mix.Task.reenable("giocci_bench.visualize")
+      Mix.Task.run("giocci_bench.visualize", visualize_args)
+    end
   end
+
+  defp build_visualize_args(nil), do: []
+  defp build_visualize_args(out_dir), do: ["--out-dir", out_dir]
 
   defp parse_cases(nil), do: nil
 

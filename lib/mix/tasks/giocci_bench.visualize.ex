@@ -14,7 +14,6 @@ defmodule Mix.Tasks.GiocciBench.Visualize do
 
     * `--out-dir` - Root output directory containing `session_*` (default: giocci_bench_output)
     * `--session-dir` - Explicit session directory to visualize (supports wildcards: `*`, `?`, `[...]`; generates reports for all matching sessions)
-    * `--output` - Output HTML path (default: <session_dir>/report.html; used only for single session or if wildcard matches single)
     * `--open` - Open generated HTML in default browser
 
   """
@@ -23,25 +22,18 @@ defmodule Mix.Tasks.GiocciBench.Visualize do
   def run(args) do
     {opts, _rest, _invalid} =
       OptionParser.parse(args,
-        switches: [out_dir: :string, session_dir: :string, output: :string, open: :boolean]
+        switches: [out_dir: :string, session_dir: :string, open: :boolean]
       )
 
     out_dir = Keyword.get(opts, :out_dir, "giocci_bench_output")
 
     with {:ok, session_dirs} <- resolve_session_dirs(opts, out_dir) do
       open_flag = Keyword.get(opts, :open, false)
-      custom_output = Keyword.get(opts, :output)
-
-      session_count = length(session_dirs)
 
       {successes, failures} =
         session_dirs
         |> Enum.map(fn session_dir ->
-          output =
-            if custom_output && session_count == 1,
-              do: custom_output,
-              else: Path.join(session_dir, "report.html")
-
+          output = Path.join(session_dir, "report.html")
           {session_dir, Visualize.generate_report(session_dir, output)}
         end)
         |> Enum.split_with(fn {_dir, result} -> match?({:ok, _}, result) end)

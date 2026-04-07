@@ -72,13 +72,9 @@ defmodule Mix.Tasks.GiocciBench.Visualize.Compare do
   defp parse_session_dirs(opts) do
     opts
     |> Keyword.get_values(:session_dir)
-    |> Enum.flat_map(fn value ->
-      value
-      |> String.split(",")
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.flat_map(&expand_session_dir/1)
-    end)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.flat_map(&expand_session_dir/1)
     |> Enum.uniq()
   end
 

@@ -280,10 +280,6 @@ defmodule GiocciBench.VisualizeCompare do
         columns
         |> Enum.reject(&(&1 == "time[ms]"))
 
-      String.ends_with?(file, "_os_info_proc_stat.csv") ->
-        columns
-        |> Enum.reject(&(&1 == "time[ms]"))
-
       file in @single_runtime_files ->
         @single_runtime_columns |> Enum.filter(&(&1 in columns))
 

@@ -313,13 +313,75 @@ defmodule GiocciBench.Visualize do
     meta_path = Path.join(session_dir, "meta.json")
 
     with true <- File.exists?(meta_path),
-         {:ok, content} <- File.read(meta_path),
-         metadata when is_map(metadata) <- :json.decode(content) do
-      metadata
+         {:ok, content} <- File.read(meta_path) do
+      decode_json_map(content)
     else
       _ -> %{}
     end
   end
+
+  defp decode_json_map(content) do
+    try do
+      case :json.decode(content) do
+        metadata when is_map(metadata) -> normalize_map_keys(metadata)
+        _ -> extract_metadata_fallback(content)
+      end
+    rescue
+      _ -> extract_metadata_fallback(content)
+    end
+  end
+
+  defp normalize_map_keys(map) when is_map(map) do
+    Map.new(map, fn {key, value} ->
+      {normalize_key(key), normalize_value(value)}
+    end)
+  end
+
+  defp normalize_value(value) when is_map(value), do: normalize_map_keys(value)
+  defp normalize_value(value) when is_list(value), do: Enum.map(value, &normalize_value/1)
+  defp normalize_value(value), do: value
+
+  defp normalize_key(key) when is_binary(key), do: key
+  defp normalize_key(key) when is_atom(key), do: Atom.to_string(key)
+
+  defp normalize_key(key) when is_list(key) do
+    List.to_string(key)
+  rescue
+    _ -> inspect(key)
+  end
+
+  defp normalize_key(key), do: inspect(key)
+
+  defp extract_metadata_fallback(content) do
+    title =
+      case Regex.run(~r/"title"\s*:\s*"([^"]*)"/, content, capture: :all_but_first) do
+        [value] -> value
+        _ -> nil
+      end
+
+    cases = extract_cases_fallback(content)
+
+    %{}
+    |> maybe_put("title", title)
+    |> maybe_put("cases", cases)
+  end
+
+  defp extract_cases_fallback(content) do
+    case Regex.run(~r/"cases"\s*:\s*\{(.*)\}/s, content, capture: :all_but_first) do
+      [cases_blob] ->
+        Regex.scan(~r/"([^"\\]+)"\s*:\s*"((?:\\.|[^"\\])*)"/, cases_blob)
+        |> Enum.reduce(%{}, fn [_full, key, value], acc ->
+          Map.put(acc, key, String.replace(value, ~s(\"), ~s(")))
+        end)
+
+      _ ->
+        %{}
+    end
+  end
+
+  defp maybe_put(map, _key, nil), do: map
+  defp maybe_put(map, _key, ""), do: map
+  defp maybe_put(map, key, value), do: Map.put(map, key, value)
 
   defp read_session_mfargs(metadata) when is_map(metadata) do
     case Map.get(metadata, "cases") do
@@ -954,7 +1016,9 @@ defmodule GiocciBench.Visualize do
               sectionData.charts.forEach(function(chartData) {
                 const card = el('div', { class: 'chart' });
                 card.appendChild(el('h3', {}, chartData.title));
-                card.appendChild(el('div', { class: 'chart-subtitle' }, sectionData.title));
+                if (DATA.session_title) {
+                  card.appendChild(el('div', { class: 'chart-subtitle' }, DATA.session_title));
+                }
                 const canvas = el('canvas');
                 card.appendChild(canvas);
                 pendingCharts.push({ canvas: canvas, chartData: chartData });

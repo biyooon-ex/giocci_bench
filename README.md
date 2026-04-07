@@ -65,7 +65,7 @@ giocci の連続処理として、`register_client` → `save_module` → `exec_
 
 ```
 giocci_bench_output/
-  session_20260309-140530/
+  session_20260309-140530-single/
     meta.json                  # 計測セッションのメタデータ
     ping.csv                   # ping 計測結果
     register_client.csv        # 単体計測結果（ケースごとに分割）
@@ -79,7 +79,7 @@ giocci_bench_output/
 
 ```
 giocci_bench_output/
-  session_20260309-140530/
+  session_20260309-140530-local/
     meta.json
     local_exec.csv
 ```
@@ -88,7 +88,7 @@ giocci_bench_output/
 
 ```
 giocci_bench_output/
-  session_20260310-101530/
+  session_20260310-101530-sequence/
     meta.json
     ping.csv
     sequence.csv               # シーケンス計測結果
@@ -112,6 +112,7 @@ giocci_bench_output/
 - `measure_mfargs` には設定/実行時に使った計測対象 mfargs（`config/config.exs` の `measure_mfargs` など）が `inspect/1` で記録されます。
 - giocci のケースは引数末尾のオプション（`timeout` と `measure_to`）も含まれます。
 - 単体計測では `measure_to` は meta.json では `nil` で記録されますが、実行時には計測用 PID が注入されます。
+- `measure_mfargs` には計測対象として設定された mfargs が `inspect/1` で文字列化されて記録されます（`cases` 内の個別ケースの mfargs とは異なります）。
 - `--title` 指定時は `title` フィールドが meta.json に追加されます。
 
 ```json
@@ -123,6 +124,7 @@ giocci_bench_output/
   "os_type": "unix-linux",
   "system_arch": "x86_64-pc-linux-gnu",
   "cpu_cores": 4,
+  "measure_mfargs": "{GiocciBench.Samples.Sieve, :run, [[1000000]]}",
   "cases": {
     "register_client": "{Giocci, :register_client, [\"giocci_relay\", [timeout: 5000, measure_to: nil]]}",
     "save_module": "{Giocci, :save_module, [\"giocci_relay\", GiocciBench.Samples.Sieve, [timeout: 5000, measure_to: nil]]}",
@@ -135,6 +137,7 @@ giocci_bench_output/
 
 ```json
 {
+  "measure_mfargs": "{GiocciBench.Samples.Sieve, :run, [[1000000]]}",
   "cases": {
     "local_exec": "{GiocciBench.Samples.Sieve, :run, [[1000000]]}"
   }
@@ -146,6 +149,7 @@ giocci_bench_output/
 
 ```json
 {
+  "measure_mfargs": "{GiocciBench.Samples.Sieve, :run, [[1000000]]}",
   "cases": {
     "sequence": "{Giocci, :exec_func, [\"giocci_relay\", {GiocciBench.Samples.Sieve, :run, [[1000000]]}, [timeout: 5000]]}"
   }
@@ -156,7 +160,7 @@ giocci_bench_output/
 
 #### ping 計測 (ping.csv)
 
-ping の計測結果を記録します。`session_<run_id>` ディレクトリ内に保存されます。
+ping の計測結果を記録します。`session_<run_id>-ping` ディレクトリ内に保存されます。
 
 ##### カラム
 

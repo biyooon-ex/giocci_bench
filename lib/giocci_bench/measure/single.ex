@@ -121,6 +121,7 @@ defmodule GiocciBench.Measure.Single do
         "os_type" => env.os_type,
         "system_arch" => env.system_arch,
         "cpu_cores" => env.cpu_cores,
+        "measure_mfargs" => inspect(mfargs),
         "cases" => cases_mapping
       }
       |> maybe_put_title(title)
@@ -401,8 +402,10 @@ defmodule GiocciBench.Measure.Single do
   defp maybe_put_title(metadata, nil), do: metadata
   defp maybe_put_title(metadata, title), do: Map.put(metadata, "title", title)
 
-  defp build_session_dir_name(run_id, nil), do: "session_#{run_id}"
-  defp build_session_dir_name(run_id, title), do: "session_#{run_id}_#{sanitize_title(title)}"
+  defp build_session_dir_name(run_id, nil), do: "session_#{run_id}-single"
+
+  defp build_session_dir_name(run_id, title),
+    do: "session_#{run_id}-single-#{sanitize_title(title)}"
 
   defp normalize_title(nil), do: nil
 

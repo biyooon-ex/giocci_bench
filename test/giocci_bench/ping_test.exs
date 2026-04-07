@@ -60,7 +60,7 @@ defmodule GiocciBench.PingTest do
         silent: true
       )
 
-    assert Path.basename(session_dir) == "session_test_run_nightly run"
+    assert Path.basename(session_dir) == "session_test_run-ping-nightly run"
   end
 
   test "rejects non-ip targets" do

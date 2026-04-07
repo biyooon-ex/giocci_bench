@@ -152,8 +152,10 @@ defmodule GiocciBench.Ping do
     |> Calendar.strftime("%Y%m%d-%H%M%S")
   end
 
-  defp build_session_dir_name(run_id, nil), do: "session_#{run_id}"
-  defp build_session_dir_name(run_id, title), do: "session_#{run_id}_#{sanitize_title(title)}"
+  defp build_session_dir_name(run_id, nil), do: "session_#{run_id}-ping"
+
+  defp build_session_dir_name(run_id, title),
+    do: "session_#{run_id}-ping-#{sanitize_title(title)}"
 
   defp normalize_title(nil), do: nil
 

@@ -157,17 +157,17 @@ defmodule Mix.Tasks.GiocciBench.VisualizeTest do
   end
 
   defp order_in_text(text, patterns) do
-    {_ok, _last} =
-      Enum.reduce_while(patterns, {:ok, -1}, fn pattern, {:ok, last_index} ->
-        case :binary.match(text, pattern) do
-          {index, _length} when index > last_index ->
-            {:cont, {:ok, index}}
+    case Enum.reduce_while(patterns, {:ok, -1}, fn pattern, {:ok, last_index} ->
+           case :binary.match(text, pattern) do
+             {index, _length} when index > last_index ->
+               {:cont, {:ok, index}}
 
-          _ ->
-            {:halt, {:error, {pattern, last_index}}}
-        end
-      end)
-
-    true
+             _ ->
+               {:halt, {:error, {pattern, last_index}}}
+           end
+         end) do
+      {:ok, _last} -> true
+      {:error, _reason} -> false
+    end
   end
 end

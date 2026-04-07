@@ -65,7 +65,7 @@ defmodule Mix.Tasks.GiocciBench.Visualize do
       case :os.type() do
         {:unix, :darwin} -> {"open", [path]}
         {:unix, _} -> {"xdg-open", [path]}
-        {:win32, _} -> {"cmd", ["/c", "start", path]}
+        {:win32, _} -> {"cmd", ["/c", "start", "", path]}
       end
 
     case command do

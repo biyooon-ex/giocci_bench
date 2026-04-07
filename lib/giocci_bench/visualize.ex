@@ -562,17 +562,25 @@ defmodule GiocciBench.Visualize do
         []
 
       _ ->
-        base_time = points |> List.first() |> elem(0)
+        base_time =
+          Enum.find_value(points, fn
+            {nil, _y} -> nil
+            {t, _y} -> t
+          end)
 
-        points
-        |> Enum.map(fn {t, y} ->
-          if is_nil(t) or is_nil(y) do
-            nil
-          else
-            %{"x" => (t - base_time) / 1000.0, "y" => y}
-          end
-        end)
-        |> Enum.reject(&is_nil/1)
+        if is_nil(base_time) do
+          []
+        else
+          points
+          |> Enum.map(fn {t, y} ->
+            if is_nil(t) or is_nil(y) do
+              nil
+            else
+              %{"x" => (t - base_time) / 1000.0, "y" => y}
+            end
+          end)
+          |> Enum.reject(&is_nil/1)
+        end
     end
   end
 
@@ -797,7 +805,7 @@ defmodule GiocciBench.Visualize do
       <body>
         <main id="app"></main>
         <script>
-          const DATA = #{encoded};
+          const DATA = #{String.replace(encoded, "</", "<\\/")};
           const COLORS = ["#0f766e", "#2563eb", "#d97706", "#dc2626", "#7c3aed", "#0891b2", "#65a30d", "#be185d", "#ca8a04", "#1d4ed8"];
 
           function el(tag, attrs, children) {

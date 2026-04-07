@@ -95,7 +95,7 @@ giocci_bench_output/
 ```
 
 - 出力先ディレクトリのデフォルトは `giocci_bench_output`
-- ディレクトリの命名規則は `session_<runid>-<task>[-<title>]`
+- ディレクトリの命名規則は `session_<run_id>-<task>[-<title>]`
   - `run_id` は実行開始時刻（UTC）の `YYYYMMDD-HHMMSS` 形式
   - `task` は実行したMixタスク名
     - 単体計測のディレクトリ名は `session_<run_id>-single`
@@ -416,8 +416,7 @@ mix giocci_bench.visualize --open
 
 ヘッダには以下の情報が表示されます。
 
-- セッションタイトル（`meta.json` の `title` がある場合）
-- タイトル未指定時は `meta.json` の `measure_mfargs` を見出し文字列として表示
+- セッションタイトル（`meta.json` の `session_title` がある場合はそれを表示し、未指定時は固定タイトル `Giocci Bench Visualization` を表示）
 - セッションディレクトリ名とレポート生成時刻
 - 計測対象の MFArgs（`meta.json` の `cases`）
 

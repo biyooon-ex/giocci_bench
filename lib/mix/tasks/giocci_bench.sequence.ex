@@ -76,16 +76,14 @@ defmodule Mix.Tasks.GiocciBench.Sequence do
     Mix.shell().info("measurement session created: #{session_dir}")
 
     if visualize do
-      visualize_args = build_visualize_args(session_dir, out_dir)
+      visualize_args = build_visualize_args(out_dir, session_dir)
       Mix.Task.reenable("giocci_bench.visualize")
       Mix.Task.run("giocci_bench.visualize", visualize_args)
     end
   end
 
-  defp build_visualize_args(session_dir, nil), do: ["--session-dir", session_dir]
-
-  defp build_visualize_args(session_dir, out_dir),
-    do: ["--session-dir", session_dir, "--out-dir", out_dir]
+  defp build_visualize_args(nil, session_dir), do: ["--session-dir", session_dir]
+  defp build_visualize_args(out_dir, session_dir), do: ["--out-dir", out_dir, "--session-dir", session_dir]
 
   defp parse_ping_targets(nil), do: nil
 

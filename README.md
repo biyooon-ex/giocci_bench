@@ -328,6 +328,9 @@ mix giocci_bench.single --include-timestamps
 # OS情報（CPU/メモリ）も取得（100ms周期、warmup後〜計測完了まで）
 mix giocci_bench.single --os-info
 
+# 計測完了後に可視化して report.html を生成
+mix giocci_bench.single --visualize
+
 # シーケンス計測を実行
 mix giocci_bench.sequence
 
@@ -336,6 +339,9 @@ mix giocci_bench.sequence --no-ping
 
 # シーケンス計測で反復回数を変更
 mix giocci_bench.sequence --iterations 10
+
+# ローカル比較計測 + 計測完了後の可視化
+mix giocci_bench.local --visualize
 ```
 
 ### 利用可能なオプション
@@ -360,6 +366,7 @@ mix giocci_bench.sequence --iterations 10
 - `--ping-count` - 各ターゲットへの ping 回数（デフォルト: 5）
 - `--include-timestamps` - 計算元タイムスタンプ列をCSVに含める（デフォルト: 無効）
 - `--os-info` - OS情報計測を有効化（100ms周期、warmup後〜計測完了まで、デフォルト: 無効）
+- `--visualize` - 計測完了後に最新セッションを可視化し `report.html` を生成（デフォルト: 無効）
 
 #### ローカル比較計測
 
@@ -369,6 +376,7 @@ mix giocci_bench.sequence --iterations 10
 - `--title` - セッションタイトル（出力ディレクトリ名末尾と meta.json の `title` に反映）
 - `--include-timestamps` - 計算元タイムスタンプ列をCSVに含める（デフォルト: 無効）
 - `--os-info` - OS情報計測を有効化（100ms周期、warmup後〜計測完了まで、デフォルト: 無効）
+- `--visualize` - 計測完了後に最新セッションを可視化し `report.html` を生成（デフォルト: 無効）
 
 #### シーケンス計測
 
@@ -382,6 +390,7 @@ mix giocci_bench.sequence --iterations 10
 - `--ping-targets` - ping ターゲット（カンマ区切り）（デフォルト: 127.0.0.1）
 - `--ping-count` - 各ターゲットへの ping 回数（デフォルト: 5）
 - `--os-info` - OS情報計測を有効化（100ms周期、warmup後〜計測完了まで、デフォルト: 無効）
+- `--visualize` - 計測完了後に最新セッションを可視化し `report.html` を生成（デフォルト: 無効）
 
 ### マトリクス実行スクリプト（single/sequence × 2 endpoints × 4 apps）
 
@@ -436,17 +445,15 @@ mix giocci_bench.visualize --session-dir giocci_bench_output/session_20260406-10
 # ワイルドカードでセッション指定（パターンに一致するセッション全てを一括処理）
 mix giocci_bench.visualize --session-dir "giocci_bench_output/session_20260406-10*"
 
-# 出力先を指定（単体セッションまたはワイルドカードが1つのみマッチの場合に有効）
-mix giocci_bench.visualize --session-dir giocci_bench_output/session_20260406-103137 --output tmp/bench_report.html
-
 # report.html を生成してブラウザで開く
 mix giocci_bench.visualize --open
 ```
 
 - `--out-dir` - `session_*` を含む出力ディレクトリ（デフォルト: giocci_bench_output）
 - `--session-dir` - 可視化対象のセッションディレクトリを明示指定（ワイルドカード: `*`, `?`, `[...]` に対応；マッチした全セッションを一括処理）
-- `--output` - 生成する HTML レポートの出力パス（デフォルト: `<session_dir>/report.html`；複数セッション一括処理時は各セッションディレクトリ配下に自動生成）
 - `--open` - 生成後に既定ブラウザで HTML を開く（複数セッション時は全て開く）
+
+生成先は常に各セッションディレクトリ配下の `report.html` です。
 
 `mix giocci_bench.visualize` はセッション内の以下の CSV を自動検出して可視化します。
 
